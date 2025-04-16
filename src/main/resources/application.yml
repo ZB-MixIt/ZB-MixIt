@@ -11,6 +11,9 @@ spring:
 
   autoconfigure:
     exclude:
-      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
       - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
 
+security:
+  jwt:
+    expiration-time: 86400000
+    secret-key: VlwEyVBsYt9V7zq57TejMnVUyzblYcfPQye08f7MGVA9XkHa
