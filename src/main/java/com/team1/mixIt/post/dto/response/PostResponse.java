@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @Schema(description = "게시판 응답 DTO")
@@ -23,6 +25,9 @@ public class PostResponse {
 
     @Schema(description = "게시물 내용", example = "게시물 내용")
     private String content;
+
+    @Schema(description = "첨부 이미지 ID 목록", example = "[1, 2, 3]")
+    private List<Long> imageIds;
 
     @Schema(description = "조회수", example = "0")
     private Integer viewCount;

@@ -29,4 +29,7 @@ public class PostCreateRequest {
     @Schema(description = "게시물에 달릴 태그 목록 (최대 10개, 각 태그는 10자 이내)", example = "[\"서브웨이\", \"에그마요\", \"랜치소스\"]")
     private List<@Size(max = 10, message = "태그는 10자 이내로 입력해 주세요.") String> tags;
 
+    @Schema(description = "첨부 이미지 ID 목록", example = "[1,2,3]")
+    private List<Long> imageIds;
+
 }

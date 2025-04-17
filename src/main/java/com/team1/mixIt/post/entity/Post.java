@@ -1,8 +1,12 @@
 package com.team1.mixIt.post.entity;
 
+import com.team1.mixIt.common.config.ImageIdListConverter;
 import com.team1.mixIt.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Entity
@@ -29,26 +33,21 @@ public class Post extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(name = "image_ids", columnDefinition = "TEXT")
-    private String imageIds;
+    @Convert(converter = ImageIdListConverter.class)
+    @Column(name = "image_ids", columnDefinition = "JSON")
+    @Builder.Default
+    private List<Long> imageIds = new ArrayList<>();
 
     @Column(name = "view_count")
-    private Integer viewCount;
+    private Integer viewCount = 0;
 
     @Column(name= "like_count")
-    private Integer likeCount;
+    private Integer likeCount = 0;
 
     @Column(name = "bookmark_count")
-    private Integer bookmarkCount;
+    private Integer bookmarkCount = 0;
 
     @Column(name = "avg_rating")
-    private double avgRating;
+    private double avgRating = 0.0;
 
-    @PrePersist
-    private void init() {
-        if(viewCount == null) viewCount = 0;
-        if(likeCount == null) likeCount = 0;
-        if(bookmarkCount == null) bookmarkCount = 0;
-        avgRating = 0.0;
-    }
 }
