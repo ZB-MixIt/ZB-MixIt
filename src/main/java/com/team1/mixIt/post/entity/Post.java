@@ -7,7 +7,8 @@ import lombok.*;
 
 @Entity
 @Table(name = "post")
-@Getter @Setter
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -28,15 +29,26 @@ public class Post extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column
+    @Column(name = "image_ids", columnDefinition = "TEXT")
     private String imageIds;
 
-    @Column(nullable = false)
-    private Integer viewCount = 0;
+    @Column(name = "view_count")
+    private Integer viewCount;
 
-    @Column(nullable = false)
-    private Integer likeCount = 0;
+    @Column(name= "like_count")
+    private Integer likeCount;
 
-    @Column(nullable = false)
-    private Integer bookmarkCount = 0;
+    @Column(name = "bookmark_count")
+    private Integer bookmarkCount;
+
+    @Column(name = "avg_rating")
+    private double avgRating;
+
+    @PrePersist
+    private void init() {
+        if(viewCount == null) viewCount = 0;
+        if(likeCount == null) likeCount = 0;
+        if(bookmarkCount == null) bookmarkCount = 0;
+        avgRating = 0.0;
+    }
 }
