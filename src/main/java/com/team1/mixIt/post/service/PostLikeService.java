@@ -2,7 +2,6 @@ package com.team1.mixIt.post.service;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.post.dto.response.LikeResponse;
-import com.team1.mixIt.post.dto.response.LikeStatusResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.entity.PostLike;
 import com.team1.mixIt.post.repository.PostLikeRepository;
@@ -38,6 +37,8 @@ public class PostLikeService {
             postLikeRepository.save(like);
             post.setLikeCount(post.getLikeCount() + 1);
             nowLiked = true;
+
+
         }
         postRepository.save(post);
 
@@ -46,9 +47,9 @@ public class PostLikeService {
     }
 
     @Transactional(readOnly = true)
-    public ResponseTemplate<LikeStatusResponse> status(Long postId, Long userId) {
-        boolean liked = postLikeRepository.findByPostIdAndUserId(postId, userId).isPresent();
-        long total = postLikeRepository.countByPostId(postId);
-        return ResponseTemplate.ok(new LikeStatusResponse(liked, total));
+    public ResponseTemplate<LikeResponse> status(Long postId, Long userId) {
+        boolean hasLiked = postLikeRepository.findByPostIdAndUserId(postId, userId).isPresent();
+        long likeCount = postLikeRepository.countByPostId(postId);
+        return ResponseTemplate.ok(new LikeResponse(hasLiked, likeCount));
     }
 }
