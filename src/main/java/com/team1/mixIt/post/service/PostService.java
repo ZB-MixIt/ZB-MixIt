@@ -40,7 +40,7 @@ public class PostService {
     @Transactional(readOnly = true)
     public PostResponse getPostById(Long id) {
         Post post = postRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("게시물이 존재하지 않습니다."));
+                .orElseThrow(() -> new RuntimeException("The post does not exist."));
         return mapToPostResponse(post);
     }
 
@@ -53,7 +53,7 @@ public class PostService {
     @Transactional
     public void updatePost(Long id, PostUpdateRequest request) {
         Post post = postRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("게시물이 존재하지 않습니다."));
+                .orElseThrow(() -> new RuntimeException("The post does not exist."));
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
         post.setImageIds(nonNull(request.getImageIds()) ? request.getImageIds() : List.of());
@@ -62,10 +62,9 @@ public class PostService {
 
     @Transactional
     public void deletePost(Long id) {
-        if (!postRepository.existsById(id)) {
-            throw new RuntimeException("게시물이 존재하지 않습니다.");
-        }
-        postRepository.deleteById(id);
+        Post post = postRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("The post does not exist."));
+        postRepository.delete(post);
     }
 
     private PostResponse mapToPostResponse(Post post) {
