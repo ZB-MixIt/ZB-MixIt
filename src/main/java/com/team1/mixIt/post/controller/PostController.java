@@ -7,6 +7,7 @@ import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.dto.response.LikeResponse;
 import com.team1.mixIt.post.service.PostLikeService;
 import com.team1.mixIt.post.service.PostService;
+import com.team1.mixIt.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -15,6 +16,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,7 +24,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/posts")
 @RequiredArgsConstructor
-@Tag(name = "게시판 API", description = "게시판 및 좋아요 관련 API")
+@Tag(name = "게시판 API", description = "게시판 관련 API")
 public class PostController {
 
     private final PostService postService;
@@ -37,9 +39,10 @@ public class PostController {
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseTemplate<Void> createPost(
+            @AuthenticationPrincipal User user,
             @Valid @RequestBody PostCreateRequest dto
     ) {
-        postService.createPost(dto);
+        postService.createPost(user.getId(), dto);
         return ResponseTemplate.ok();
     }
 
@@ -66,18 +69,22 @@ public class PostController {
     })
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseTemplate<Void> updatePost(
+            @AuthenticationPrincipal User user,
             @PathVariable Long id,
             @Valid @RequestBody PostUpdateRequest dto
     ) {
-        postService.updatePost(id, dto);
+        postService.updatePost(user.getId(), id, dto);
         return ResponseTemplate.ok();
     }
 
     @Operation(summary = "게시물 삭제", description = "특정 게시물을 삭제합니다.")
     @ApiResponse(responseCode = "200", description = "삭제 성공")
     @DeleteMapping("/{id}")
-    public ResponseTemplate<Void> deletePost(@PathVariable Long id) {
-        postService.deletePost(id);
+    public ResponseTemplate<Void> deletePost(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id
+    ) {
+        postService.deletePost(user.getId(), id);
         return ResponseTemplate.ok();
     }
 

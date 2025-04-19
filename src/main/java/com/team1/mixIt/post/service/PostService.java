@@ -22,13 +22,11 @@ public class PostService {
     private final PostRepository postRepository;
 
     @Transactional
-    public void createPost(PostCreateRequest request) {
+    public void createPost(Long userId, PostCreateRequest request) {
         // 테스트용 현재 로그인한 사용자 ID는 1로 하드코딩
         // TODO: 실제 로그인 유저 ID 로 교체
-        Long currentUserId = 1L;
-
         Post post = Post.builder()
-                .userId(currentUserId)
+                .userId(userId)
                 .category(request.getCategory())
                 .title(request.getTitle())
                 .content(request.getContent())
@@ -51,8 +49,8 @@ public class PostService {
     }
 
     @Transactional
-    public void updatePost(Long id, PostUpdateRequest request) {
-        Post post = postRepository.findById(id)
+    public void updatePost(Long userId, Long postId, PostUpdateRequest request) {
+        Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("The post does not exist."));
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
@@ -61,8 +59,8 @@ public class PostService {
     }
 
     @Transactional
-    public void deletePost(Long id) {
-        Post post = postRepository.findById(id)
+    public void deletePost(Long userId, Long postId) {
+        Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("The post does not exist."));
         postRepository.delete(post);
     }
