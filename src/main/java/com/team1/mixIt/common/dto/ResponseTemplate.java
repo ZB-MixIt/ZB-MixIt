@@ -27,7 +27,7 @@ public class ResponseTemplate<T> {
     }
 
     public static<T> ResponseTemplate<T> ok(T data) {
-        return ResponseTemplate.of(ResponseCode.SUCCESS, null);
+        return ResponseTemplate.of(ResponseCode.SUCCESS, data);
     }
 
     public static ResponseTemplate<Void> of(ResponseCode responseCode) {
