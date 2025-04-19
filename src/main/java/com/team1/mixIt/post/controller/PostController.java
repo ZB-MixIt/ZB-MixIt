@@ -87,25 +87,4 @@ public class PostController {
         postService.deletePost(user.getId(), id);
         return ResponseTemplate.ok();
     }
-
-
-    @Operation(summary = "게시물 좋아요 토글", description = "좋아요/취소를 토글합니다.")
-    @ApiResponse(responseCode = "200", description = "토글 완료")
-    @PostMapping("/{postId}/like")
-    public ResponseTemplate<LikeResponse> toggleLike(
-            @PathVariable Long postId,
-            @RequestHeader("X-User-Id") Long userId
-    ) {
-        return likeService.toggleLike(postId, userId);
-    }
-
-    @Operation(summary = "게시물 좋아요 상태 조회", description = "현재 사용자의 좋아요 여부와 카운트를 조회합니다.")
-    @ApiResponse(responseCode = "200", description = "조회 성공")
-    @GetMapping("/{postId}/like")
-    public ResponseTemplate<LikeResponse> getLikeStatus(
-            @PathVariable Long postId,
-            @RequestHeader("X-User-Id") Long userId
-    ) {
-        return likeService.status(postId, userId);
-    }
 }
