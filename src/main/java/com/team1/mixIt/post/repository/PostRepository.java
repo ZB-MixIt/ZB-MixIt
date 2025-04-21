@@ -7,13 +7,14 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
-public interface PostRepository extends JpaRepository<Post, Long> {
+public interface PostRepository extends JpaRepository<Post, Long>,
+                                        JpaSpecificationExecutor<Post> {
 
-    @Modifying @Transactional
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Post p SET p.likeCount = p.likeCount + 1 WHERE p.id = :postId")
     void increaseLikeCount(@Param("postId") Long postId);
 
-    @Modifying @Transactional
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Post p SET p.likeCount = p.likeCount - 1 WHERE p.id = :postId")
     void decreaseLikeCount(@Param("postId") Long postId);
 }

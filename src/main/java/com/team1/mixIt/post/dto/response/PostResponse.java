@@ -32,8 +32,11 @@ public class PostResponse {
     @Schema(description = "조회수", example = "0")
     private Integer viewCount;
 
+    @Schema(description = "현재 사용자가 이 게시물을 좋아요한 상태인지", example = "true")
+    private Boolean hasLiked;
+
     @Schema(description = "좋아요 수", example = "0")
-    private Integer likeCount;
+    private Long likeCount;
 
     @Schema(description = "북마크 수", example = "0")
     private Integer bookmarkCount;

@@ -42,7 +42,7 @@ public class Post extends BaseEntity {
     private Integer viewCount = 0;
 
     @Column(name= "like_count")
-    private Integer likeCount = 0;
+    private long likeCount;
 
     @Column(name = "bookmark_count")
     private Integer bookmarkCount = 0;

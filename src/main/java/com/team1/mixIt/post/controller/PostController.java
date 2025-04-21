@@ -49,17 +49,30 @@ public class PostController {
     @Operation(summary = "게시물 목록 조회", description = "모든 게시물을 조회합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseTemplate<List<PostResponse>> getAllPosts() {
-        return ResponseTemplate.ok(postService.getAllPosts());
+    public ResponseTemplate<List<PostResponse>> getAllPosts(
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false) String category,               // 카테고리
+            @RequestParam(required = false) String type,                   // 인기순, 추천순
+            @RequestParam(required = false) String keyword,                // 제목·내용 검색어
+            @RequestParam(defaultValue = "createdAt") String sortBy,       // 정렬 기준
+            @RequestParam(defaultValue = "desc") String sortDir
+    ) {
+        List<PostResponse> list = postService.getAllPosts(
+                user.getId(), category, type, keyword, sortBy, sortDir
+        );
+        return ResponseTemplate.ok(list);
     }
+
 
     @Operation(summary = "게시물 상세 조회", description = "특정 게시물을 조회합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseTemplate<PostResponse> getPostById(
-            @PathVariable Long id
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user
+
     ) {
-        return ResponseTemplate.ok(postService.getPostById(id));
+        return ResponseTemplate.ok(postService.getPostById(id, user.getId()));
     }
 
     @Operation(summary = "게시물 수정", description = "특정 게시물을 수정합니다.")
