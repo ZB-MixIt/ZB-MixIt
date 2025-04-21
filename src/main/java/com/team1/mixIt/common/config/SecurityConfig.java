@@ -29,7 +29,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(customizer -> customizer
-                        .requestMatchers(HttpMethod.PUT, "/accounts/password").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/accounts/password").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/images").permitAll()
                         .requestMatchers(AUTH_WHITELIST).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)

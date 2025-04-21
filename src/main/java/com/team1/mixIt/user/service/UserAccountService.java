@@ -1,5 +1,7 @@
 package com.team1.mixIt.user.service;
 
+import com.team1.mixIt.image.entity.Image;
+import com.team1.mixIt.image.repository.ImageRepository;
 import com.team1.mixIt.user.dto.UserCreateDto;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.exception.*;
@@ -10,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,6 +22,8 @@ public class UserAccountService {
     private final PasswordEncoder passwordEncoder;
 
     private final UserRepository userRepository;
+
+    private final ImageRepository imageRepository;
 
 
     public Optional<User> findUser(String name, String email, String birth) {
@@ -37,8 +42,14 @@ public class UserAccountService {
                 .birthdate(convertToLocalDate(dto.getBirth()))
                 .email(dto.getEmail())
                 .nickname(dto.getEmail())
-                // Todo image 관련 설정 추가
                 .build();
+
+        if (Objects.nonNull(dto.getImageId())) {
+            Image image = imageRepository.findById(dto.getImageId()).orElseThrow();// Todo Exception 정의
+
+            if (Objects.nonNull(image.getUser())) throw new RuntimeException(); // Todo Exception 정의
+            user.updateProfileImage(image);
+        }
 
         user = userRepository.save(user);
         // Todo 약관 관련 추가
