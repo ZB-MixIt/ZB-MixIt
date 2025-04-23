@@ -11,10 +11,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+@Validated
 @RestController
 @RequestMapping("/api/v1")
 @Tag(name = "게시판 API", description = "게시물 북마크 관련 API")
@@ -74,13 +75,12 @@ public class PostBookmarkController {
          )
  )
  @GetMapping("/users/me/bookmarks")
- public ResponseTemplate<Page<BookmarkResponse>> list(
+ public ResponseTemplate<BookmarkResponsePage> list(
          @AuthenticationPrincipal User user,
          @RequestParam(defaultValue = "0") int page,
          @RequestParam(defaultValue = "10") int size
  ) {
-  return ResponseTemplate.ok(
-          bookmarkService.getMyBookmarks(user.getId(), page, size)
-  );
+  BookmarkResponsePage dto = bookmarkService.getMyBookmarks(user.getId(), page, size);
+  return ResponseTemplate.ok(dto);
  }
 }

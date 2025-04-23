@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_bookmark",
-uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "post_id"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "post_id"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -28,6 +28,7 @@ public class UserBookmark {
     @JoinColumn(name = "post_id")
     private Post post;
 
+    @Builder.Default
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }
