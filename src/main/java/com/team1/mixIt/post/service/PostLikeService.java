@@ -1,8 +1,6 @@
 package com.team1.mixIt.post.service;
 
-import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.post.dto.response.LikeResponse;
-import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.entity.PostLike;
 import com.team1.mixIt.post.repository.PostLikeRepository;
 import com.team1.mixIt.post.repository.PostRepository;
@@ -18,12 +16,13 @@ public class PostLikeService {
     private final PostLikeRepository postLikeRepository;
 
     @Transactional
-    public ResponseTemplate<LikeResponse> addLike(Long postId, Long userId) {
+    public LikeResponse addLike(Long postId, Long userId) {
         if (!postRepository.existsById(postId)) {
             throw new RuntimeException("존재하지 않는 게시물입니다.");
         }
 
-        if (postLikeRepository.findByPostIdAndUserId(postId, userId).isEmpty()) {
+        boolean hasLiked = postLikeRepository.findByPostIdAndUserId(postId, userId).isEmpty();
+        if (hasLiked) {
             postLikeRepository.save(PostLike.builder()
                     .postId(postId)
                     .userId(userId)
@@ -31,22 +30,21 @@ public class PostLikeService {
             postRepository.increaseLikeCount(postId);
         }
         long count = postLikeRepository.countByPostId(postId);
-        return ResponseTemplate.ok(new LikeResponse(true, count));
+        return new LikeResponse(hasLiked, count);
     }
 
     @Transactional
-    public ResponseTemplate<Void> removeLike(Long postId, Long userId) {
+    public void removeLike(Long postId, Long userId) {
         postLikeRepository.findByPostIdAndUserId(postId, userId)
                 .ifPresent(like -> {
                     postLikeRepository.delete(like);
                     postRepository.decreaseLikeCount(postId);
                 });
-        return ResponseTemplate.ok();
     }
 
-    public ResponseTemplate<LikeResponse> status(Long postId, Long userId) {
-        boolean hasLiked  = postLikeRepository.findByPostIdAndUserId(postId, userId).isPresent();
-        long    count     = postLikeRepository.countByPostId(postId);
-        return ResponseTemplate.ok(new LikeResponse(hasLiked, count));
+    public LikeResponse status(Long postId, Long userId) {
+        boolean hasLiked = postLikeRepository.findByPostIdAndUserId(postId, userId).isPresent();
+        long count = postLikeRepository.countByPostId(postId);
+        return new LikeResponse(hasLiked, count);
     }
 }
