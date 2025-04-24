@@ -6,7 +6,7 @@ spring:
     name: mixIt
   profiles:
     active: local
-    include: private
+    include: private, email
   jpa:
     open-in-view: false
 

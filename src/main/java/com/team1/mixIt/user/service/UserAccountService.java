@@ -1,5 +1,6 @@
 package com.team1.mixIt.user.service;
 
+import com.team1.mixIt.email.service.EmailService;
 import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.image.repository.ImageRepository;
 import com.team1.mixIt.user.dto.UserCreateDto;
@@ -19,6 +20,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class UserAccountService {
+    private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
     private final UserRepository userRepository;
@@ -34,6 +36,8 @@ public class UserAccountService {
         userRepository.findByLoginId(dto.getLoginId()).ifPresent(v -> {throw new DuplicateLoginIdException(dto.getLoginId());});
         userRepository.findByEmail(dto.getEmail()).ifPresent(v -> {throw new DuplicateEmailException(dto.getEmail());});
         userRepository.findByNickname(dto.getNickname()).ifPresent(v -> {throw new DuplicateNicknameException(dto.getNickname());});
+
+        emailService.checkIsEmailVerified(dto.getEmail());
 
         User user = User.builder()
                 .loginId(dto.getLoginId())
@@ -53,6 +57,7 @@ public class UserAccountService {
 
         user = userRepository.save(user);
         // Todo 약관 관련 추가
+        emailService.deleteVerifiedHistory(dto.getEmail());
         return user;
     }
 
@@ -80,11 +85,9 @@ public class UserAccountService {
         if (!user.getEmail().equals(email)) throw new UserNotFoundException(email);
 
         String newPwd = UUID.randomUUID().toString().substring(0, 8);
-        updatePassword(loginId, user.getPassword(), newPwd);
 
-        // Todo newPwd 이메일 발송 추가
-        //  실패 시 update revoke 필요
-        //  Transaction 묶기에는 외부 API 호출
+        emailService.sendPasswordResetEmail(user.getEmail(), newPwd);
+        updatePassword(loginId, user.getPassword(), newPwd);
     }
 
     private LocalDate convertToLocalDate(String dateStr) {

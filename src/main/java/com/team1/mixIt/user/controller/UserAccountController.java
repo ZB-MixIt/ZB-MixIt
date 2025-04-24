@@ -1,6 +1,7 @@
 package com.team1.mixIt.user.controller;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
+import com.team1.mixIt.email.service.EmailService;
 import com.team1.mixIt.user.dto.UserCreateDto;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.service.UserAccountService;
@@ -31,6 +32,7 @@ import java.util.Optional;
 public class UserAccountController {
 
     private final UserAccountService userAccountService;
+    private final EmailService emailService;
 
     @PostMapping("/duplicate")
     @Operation(
@@ -39,6 +41,27 @@ public class UserAccountController {
     )
     public ResponseTemplate<Boolean> checkDuplicate(@Valid @RequestBody CheckDuplicateRequest request) {
         return ResponseTemplate.ok(userAccountService.checkDuplicate(request.getLoginId(), request.getNickname(), request.getEmail()));
+    }
+
+    @PostMapping("/email/verify-request")
+    @Operation(
+            summary = "Request email verification",
+            description = "이메인 인증 요청 API"
+    )
+    public ResponseTemplate<Void> requestEmailVerify(@Valid @RequestBody RequestVerifyEmailRequest request) {
+        userAccountService.checkDuplicate(null, null, request.getEmail());
+        emailService.sendVerificationEmail(request.getEmail());
+        return ResponseTemplate.ok();
+    }
+
+    @PostMapping("/email/verify")
+    @Operation(
+            summary = "Verify email",
+            description = "이메일 인증 검증 API"
+    )
+    public ResponseTemplate<Void> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        emailService.verifyEmail(request.getEmail(), request.getCode());
+        return ResponseTemplate.ok();
     }
 
     @PostMapping
@@ -201,5 +224,22 @@ public class UserAccountController {
     public static class ChangePwdRequest {
         private String oldPwd;
         private String newPwd;
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    public static class RequestVerifyEmailRequest {
+        private String email;
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    public static class VerifyEmailRequest {
+        private String email;
+        private String code;
     }
 }

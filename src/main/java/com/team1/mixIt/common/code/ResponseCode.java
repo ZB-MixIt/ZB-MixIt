@@ -1,5 +1,8 @@
 package com.team1.mixIt.common.code;
 
+import com.team1.mixIt.email.exception.EmailNotVerifiedException;
+import com.team1.mixIt.email.exception.EmailVerificationCodeNotMatch;
+import com.team1.mixIt.email.exception.EmailVerificationHistoryNotFound;
 import com.team1.mixIt.user.exception.DuplicateEmailException;
 import com.team1.mixIt.user.exception.DuplicateLoginIdException;
 import com.team1.mixIt.user.exception.DuplicateNicknameException;
@@ -64,6 +67,33 @@ public enum ResponseCode {
             HttpStatus.BAD_REQUEST,
             new Class[] {
                     PasswordMismatchException.class
+            }
+    ),
+
+    EMAIL_NOT_VERIFIED(
+            "200_100",
+            "Email not verified",
+            HttpStatus.BAD_REQUEST,
+            new Class[] {
+                    EmailNotVerifiedException.class
+            }
+    ),
+
+    EMAIL_VERIFICATION_HISTORY_NOT_FOUND(
+            "200_101",
+            "Email verification history not found",
+            HttpStatus.BAD_REQUEST,
+            new Class[] {
+                    EmailVerificationHistoryNotFound.class
+            }
+    ),
+
+    EMAIL_VERIFICATION_CODE_NOT_MATCHED(
+            "200_102",
+            "Email verification code not match",
+            HttpStatus.BAD_REQUEST,
+            new Class[] {
+                    EmailVerificationCodeNotMatch.class
             }
     ),
 
