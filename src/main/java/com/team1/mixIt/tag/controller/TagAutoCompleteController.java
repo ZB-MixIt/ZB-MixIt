@@ -20,7 +20,7 @@ import java.util.List;
 @Tag(name = "태그 자동완성", description = "입력 기반 인기 태그 자동완성")
 @RequiredArgsConstructor
 public class TagAutoCompleteController {
-    private final TagAutoCompleteService svc;
+    private final TagAutoCompleteService tagAutoCompleteService;
 
     @Operation(summary = "태그 자동완성", description = "prefix로 시작하는 태그를 추천 순으로 반환")
     @GetMapping("/autocomplete")
@@ -29,7 +29,7 @@ public class TagAutoCompleteController {
             @RequestParam(value = "limit", defaultValue = "10") int limit,
             @AuthenticationPrincipal User user
     ) {
-        List<AutoCompleteResponse> result = svc.autocomplete(prefix, limit, user);
+        List<AutoCompleteResponse> result = tagAutoCompleteService.autocomplete(prefix, limit, user);
         return ResponseTemplate.ok(result);
     }
 }
