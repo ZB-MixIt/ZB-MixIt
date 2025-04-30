@@ -1,5 +1,8 @@
 package com.team1.mixIt.user.service;
 
+import com.team1.mixIt.email.service.EmailService;
+import com.team1.mixIt.image.entity.Image;
+import com.team1.mixIt.image.repository.ImageRepository;
 import com.team1.mixIt.user.dto.UserCreateDto;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.exception.*;
@@ -10,15 +13,19 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class UserAccountService {
+    private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
     private final UserRepository userRepository;
+
+    private final ImageRepository imageRepository;
 
 
     public Optional<User> findUser(String name, String email, String birth) {
@@ -30,6 +37,8 @@ public class UserAccountService {
         userRepository.findByEmail(dto.getEmail()).ifPresent(v -> {throw new DuplicateEmailException(dto.getEmail());});
         userRepository.findByNickname(dto.getNickname()).ifPresent(v -> {throw new DuplicateNicknameException(dto.getNickname());});
 
+        emailService.checkIsEmailVerified(dto.getEmail());
+
         User user = User.builder()
                 .loginId(dto.getLoginId())
                 .password(passwordEncoder.encode(dto.getPassword()))
@@ -37,11 +46,18 @@ public class UserAccountService {
                 .birthdate(convertToLocalDate(dto.getBirth()))
                 .email(dto.getEmail())
                 .nickname(dto.getEmail())
-                // Todo image 관련 설정 추가
                 .build();
+
+        if (Objects.nonNull(dto.getImageId())) {
+            Image image = imageRepository.findById(dto.getImageId()).orElseThrow();// Todo Exception 정의
+
+            if (Objects.nonNull(image.getUser())) throw new RuntimeException(); // Todo Exception 정의
+            user.updateProfileImage(image);
+        }
 
         user = userRepository.save(user);
         // Todo 약관 관련 추가
+        emailService.deleteVerifiedHistory(dto.getEmail());
         return user;
     }
 
@@ -69,11 +85,9 @@ public class UserAccountService {
         if (!user.getEmail().equals(email)) throw new UserNotFoundException(email);
 
         String newPwd = UUID.randomUUID().toString().substring(0, 8);
-        updatePassword(loginId, user.getPassword(), newPwd);
 
-        // Todo newPwd 이메일 발송 추가
-        //  실패 시 update revoke 필요
-        //  Transaction 묶기에는 외부 API 호출
+        emailService.sendPasswordResetEmail(user.getEmail(), newPwd);
+        updatePassword(loginId, user.getPassword(), newPwd);
     }
 
     private LocalDate convertToLocalDate(String dateStr) {

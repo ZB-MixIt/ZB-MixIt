@@ -34,7 +34,7 @@ public class UserMyPageController {
     @PostMapping()
     public ResponseTemplate<GetMyPageResponse> getMyPage(@AuthenticationPrincipal User user,
                                                          @Valid @RequestBody GetMyPageRequest request) {
-        user = userService.getUser(user.getLoginId());
+        user = userService.getUser(user.getLoginId(), user.getPassword(), request.getPassword());
         return ResponseTemplate.ok(GetMyPageResponse.of(user));
     }
 
