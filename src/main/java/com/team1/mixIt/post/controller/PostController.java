@@ -17,14 +17,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Validated
 @RestController
 @RequestMapping("/api/v1/posts")
 @RequiredArgsConstructor
-@Tag(name = "게시판 API", description = "게시판 관련 API")
+@Tag(name = "게시판 API", description = "게시물 작성·조회·수정·삭제")
 public class PostController {
 
     private final PostService postService;
