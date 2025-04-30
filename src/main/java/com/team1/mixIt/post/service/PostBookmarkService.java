@@ -36,7 +36,7 @@ public class PostBookmarkService {
                     UserBookmark.builder()
                             .id(key)
                             .user(user)
-                            .post(Post.builder().id(postId).build())
+                            .post(postRepository.getReferenceById(postId))
                             .build()
             );
             postRepository.increaseBookmarkCount(postId);
@@ -52,10 +52,16 @@ public class PostBookmarkService {
         }
     }
 
-    public BookmarkResponsePage getMyBookmarks(Long userId, int page, int size) {
+    @Transactional(readOnly = true)
+    public BookmarkResponsePage getMyBookmarks(
+            Long userId,
+            int page,
+            int size,
+            Sort sort
+    ) {
         Page<UserBookmark> ubPage = userBookmarkRepository.findAllByIdUserId(
                 userId,
-                PageRequest.of(page, size, Sort.by("createdAt").descending())
+                PageRequest.of(page, size, sort)
         );
 
         Page<BookmarkResponse> content = ubPage.map(ub ->

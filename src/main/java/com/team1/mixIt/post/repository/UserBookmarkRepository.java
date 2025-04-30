@@ -11,7 +11,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UserBookmarkId> {
 
-    @EntityGraph(attributePaths = "post")
+    @EntityGraph(attributePaths =  {"post", "post.user"})
     Page<UserBookmark> findAllByIdUserId(Long userId, Pageable pageable);
 
 }

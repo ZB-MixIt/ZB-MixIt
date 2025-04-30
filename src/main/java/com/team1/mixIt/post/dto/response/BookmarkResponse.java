@@ -23,6 +23,12 @@ public class BookmarkResponse {
     @Schema(description = "첨부 이미지 ID 목록", example = "[1,2,3]")
     private final List<Long> imageIds;
 
+    @Schema(description = "작성자 ID", example = "7")
+    private final Long authorId;
+
+    @Schema(description = "작성자 닉네임", example = "mixItUser")
+    private final String authorNickname;
+
     @Schema(description = "북마크 수", example = "17")
     private final Integer bookmarkCount;
 
@@ -31,6 +37,8 @@ public class BookmarkResponse {
                 .id(post.getId())
                 .title(post.getTitle())
                 .imageIds(post.getImageIds())
+                .authorId(post.getUserId())
+                .authorNickname(post.getUser().getNickname())
                 .bookmarkCount(post.getBookmarkCount())
                 .build();
     }

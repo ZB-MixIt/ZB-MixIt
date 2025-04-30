@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -78,9 +79,23 @@ public class PostBookmarkController {
  public ResponseTemplate<BookmarkResponsePage> list(
          @AuthenticationPrincipal User user,
          @RequestParam(defaultValue = "0") int page,
-         @RequestParam(defaultValue = "10") int size
+         @RequestParam(defaultValue = "10") int size,
+         @RequestParam(defaultValue = "latest") String sort   // ← 추가
  ) {
-  BookmarkResponsePage dto = bookmarkService.getMyBookmarks(user.getId(), page, size);
+  Sort sortOption;
+  switch (sort.toLowerCase()) {
+   case "popular":
+    sortOption = Sort.by(Sort.Direction.DESC, "post.bookmarkCount");
+    break;
+   case "latest":
+   default:
+    sortOption = Sort.by(Sort.Direction.DESC, "createdAt");
+    break;
+  }
+  BookmarkResponsePage dto = bookmarkService.getMyBookmarks(
+          user.getId(), page, size, sortOption
+  );
   return ResponseTemplate.ok(dto);
  }
 }
+
