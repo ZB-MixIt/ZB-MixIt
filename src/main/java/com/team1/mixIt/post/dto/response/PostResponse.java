@@ -1,6 +1,9 @@
+// src/main/java/com/team1/mixIt/post/dto/response/PostResponse.java
 package com.team1.mixIt.post.dto.response;
 
+import com.team1.mixIt.post.entity.Post;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,6 +11,7 @@ import java.util.List;
 
 @Getter
 @Setter
+@Builder
 @Schema(description = "게시판 응답 DTO")
 public class PostResponse {
 
@@ -40,4 +44,23 @@ public class PostResponse {
 
     @Schema(description = "북마크 수", example = "0")
     private Integer bookmarkCount;
+
+    /**
+     * Post 엔티티를 PostResponse로 변환하는 팩토리 메서드
+     * hasLiked, likeCount는 서비스 레이어에서 별도 세팅
+     */
+    public static PostResponse fromEntity(Post p) {
+        return PostResponse.builder()
+                .id(p.getId())
+                .userId(p.getUserId())
+                .category(p.getCategory())
+                .title(p.getTitle())
+                .content(p.getContent())
+                .imageIds(p.getImageIds())
+                .viewCount(p.getViewCount())
+                .bookmarkCount(p.getBookmarkCount())
+                .hasLiked(false)
+                .likeCount(0L)
+                .build();
+    }
 }

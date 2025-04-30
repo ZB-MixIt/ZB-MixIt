@@ -154,4 +154,19 @@ public class S3ImageService implements ImageService {
             throw new RuntimeException(e); // Todo Exception 정의
         }
     }
+
+    @Override
+    public List<Image> findAllById(List<Long> ids) {
+        return imageRepository.findAllById(ids);
+    }
+
+    @Override
+    public void unassignAllFromPost(Long postId) {
+        List<Image> images = imageRepository.findByPostId(postId);
+        for (Image img : images) {
+            img.updateReview(null);
+            img.updateUser(null);
+        }
+        imageRepository.saveAll(images);
+    }
 }

@@ -1,12 +1,16 @@
+// src/main/java/com/team1/mixIt/post/service/PostService.java
 package com.team1.mixIt.post.service;
 
+import com.team1.mixIt.image.entity.Image;
+import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.request.PostCreateRequest;
 import com.team1.mixIt.post.dto.request.PostUpdateRequest;
-
 import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.repository.PostLikeRepository;
 import com.team1.mixIt.post.repository.PostRepository;
+import com.team1.mixIt.user.entity.User;
+import com.team1.mixIt.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
@@ -24,8 +28,10 @@ import static java.util.Objects.nonNull;
 @RequiredArgsConstructor
 public class PostService {
 
+    private final UserRepository userRepository;
     private final PostRepository postRepository;
     private final PostLikeRepository postLikeRepository;
+    private final ImageService imageService;
 
     @Transactional
     public void createPost(Long userId, PostCreateRequest request) {
@@ -37,6 +43,12 @@ public class PostService {
                 .imageIds(nonNull(request.getImageIds()) ? request.getImageIds() : List.of())
                 .build();
         postRepository.save(post);
+
+        if (nonNull(request.getImageIds()) && !request.getImageIds().isEmpty()) {
+            List<Image> images = imageService.findAllById(request.getImageIds());
+            User userProxy = userRepository.getReferenceById(userId);
+            imageService.setOwner(images, userProxy);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -48,12 +60,12 @@ public class PostService {
                 .findByPostIdAndUserId(postId, currentUserId)
                 .isPresent();
 
-        Long likeCount = postLikeRepository.countByPostId(postId);
+        long likeCount = postLikeRepository.countByPostId(postId);
 
-        PostResponse reponse = mapToPostResponse(post);
-        reponse.setHasLiked(hasLiked);
-        reponse.setLikeCount(likeCount);
-        return reponse;
+        PostResponse dto = PostResponse.fromEntity(post);
+        dto.setHasLiked(hasLiked);
+        dto.setLikeCount(likeCount);
+        return dto;
     }
 
     @Transactional(readOnly = true)
@@ -83,7 +95,7 @@ public class PostService {
 
         return posts.stream()
                 .map(post -> {
-                    var dto = mapToPostResponse(post);
+                    PostResponse dto = PostResponse.fromEntity(post);
                     boolean hasLiked = postLikeRepository
                             .findByPostIdAndUserId(post.getId(), currentUserId)
                             .isPresent();
@@ -97,6 +109,8 @@ public class PostService {
 
     @Transactional
     public void updatePost(Long userId, Long postId, PostUpdateRequest request) {
+        imageService.unassignAllFromPost(postId);
+
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("게시물이 없습니다."));
         if (!post.getUserId().equals(userId)) {
@@ -105,8 +119,13 @@ public class PostService {
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
         post.setImageIds(nonNull(request.getImageIds()) ? request.getImageIds() : List.of());
-    }
 
+        if (nonNull(request.getImageIds()) && !request.getImageIds().isEmpty()) {
+            List<Image> newImgs = imageService.findAllById(request.getImageIds());
+            User userProxy = userRepository.getReferenceById(userId);
+            imageService.setOwner(newImgs, userProxy);
+        }
+    }
 
     @Transactional
     public void deletePost(Long userId, Long postId) {
@@ -116,19 +135,5 @@ public class PostService {
             throw new AccessDeniedException("내 글만 삭제할 수 있습니다.");
         }
         postRepository.delete(post);
-    }
-
-
-    private PostResponse mapToPostResponse(Post post) {
-        var response = new PostResponse();
-        response.setId(post.getId());
-        response.setUserId(post.getUserId());
-        response.setCategory(post.getCategory());
-        response.setTitle(post.getTitle());
-        response.setContent(post.getContent());
-        response.setViewCount(post.getViewCount());
-        response.setLikeCount(post.getLikeCount());
-        response.setBookmarkCount(post.getBookmarkCount());
-        return response;
     }
 }
