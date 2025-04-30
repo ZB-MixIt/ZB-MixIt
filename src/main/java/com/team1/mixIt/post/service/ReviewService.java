@@ -1,5 +1,8 @@
 package com.team1.mixIt.post.service;
 
+import com.team1.mixIt.image.entity.Image;
+import com.team1.mixIt.image.repository.ImageRepository;
+import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.request.ReviewRequest;
 import com.team1.mixIt.post.dto.response.ReviewResponse;
 import com.team1.mixIt.post.entity.Post;
@@ -16,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -23,7 +27,8 @@ import java.util.List;
 public class ReviewService {
     private final ReviewRepository reviewRepo;
     private final PostRepository postRepo;
-    // private final ImageService imageService; // TODO: 이미지 업로드 처리
+    private final ImageRepository imageRepo;
+    private final ImageService imageService;
 
     @Transactional
     public ReviewResponse addReview(Long postId, User user, ReviewRequest req) {
@@ -42,10 +47,16 @@ public class ReviewService {
                         .build()
         );
 
-        // TODO: imageService를 통해 업로드된 이미지 저장 처리
+        if (!req.getImageIds().isEmpty()) {
+            List<Image> images = imageRepo.findAllById(req.getImageIds());
+            images.forEach(img -> img.updateReview(review));
+            imageService.setOwner(images, user);
+            imageRepo.saveAll(images);
+            review.getImages().addAll(images);
+        }
 
         recalcAverageRating(post);
-        return toResponse(review);
+        return ReviewResponse.fromEntity(review);
     }
 
     @Transactional
@@ -59,10 +70,22 @@ public class ReviewService {
         r.setContent(req.getContent());
         r.setRate(req.getRate());
 
-        // TODO: imageService를 통해 이미지 수정 처리
+        //기존 리뷰 이미지 관계 해제
+        List<Image> old = r.getImages();
+        old.forEach(img -> img.updateReview(null));
+        imageRepo.saveAll(old);
+        r.getImages().clear();
+
+        // 새로 업뎃된 이미지 연결
+        if (!req.getImageIds().isEmpty()) {
+            List<Image> images = imageRepo.findAllById(req.getImageIds());
+            images.forEach(img -> img.updateReview(r));
+            imageRepo.saveAll(images);
+            r.getImages().addAll(images);
+        }
 
         recalcAverageRating(r.getPost());
-        return toResponse(r);
+        return ReviewResponse.fromEntity(r);
     }
 
     @Transactional
@@ -74,17 +97,19 @@ public class ReviewService {
                 ));
 
         Post post = r.getPost();
+
+        // 이미지 삭제
+        List<Image> images = r.getImages();
+        images.forEach(imageService::delete);
+
         reviewRepo.delete(r);
-
-        // TODO: imageService를 통해 연관된 이미지 삭제 처리
-
         recalcAverageRating(post);
     }
 
     @Transactional(readOnly = true)
     public List<ReviewResponse> listReviews(Long postId) {
         return reviewRepo.findByPostIdOrderByRateDescCreatedAtDesc(postId).stream()
-                .map(this::toResponse)
+                .map(ReviewResponse::fromEntity)
                 .toList();
     }
 
@@ -92,19 +117,7 @@ public class ReviewService {
     public void recalcAverageRating(Post post) {
         BigDecimal avg = reviewRepo.findAverageRateByPostId(post.getId())
                 .setScale(1, RoundingMode.HALF_UP);
-        post.setAvgRating(avg);
-    }
-
-    private ReviewResponse toResponse(Review r) {
-        return ReviewResponse.builder()
-                .id(r.getId())
-                .userId(r.getUser().getId())
-                .userNickname(r.getUser().getNickname())  // DTO 필드이름과 일치
-                .content(r.getContent())
-                .rate(r.getRate())
-                .createdAt(r.getCreatedAt())             // getCreatedAt() 사용
-                .modifiedAt(r.getModifiedAt())           // getModifiedAt() 사용
-                .imageIds(List.of())                     // TODO
-                .build();
+        double avgDouble = avg.doubleValue();
+        post.setAvgRating(avgDouble);
     }
 }

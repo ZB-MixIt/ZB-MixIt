@@ -1,17 +1,21 @@
 package com.team1.mixIt.post.entity;
 
 import com.team1.mixIt.common.entity.BaseEntity;
+import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "review")
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 public class Review extends BaseEntity {
     @Id
     @GeneratedValue
@@ -30,6 +34,9 @@ public class Review extends BaseEntity {
 
     @Column(nullable = false, precision = 3, scale = 1)
     private BigDecimal rate;
+
+    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Image> images = new ArrayList<>();
 
     @Builder
     public Review(User user, Post post, String content, BigDecimal rate) {
