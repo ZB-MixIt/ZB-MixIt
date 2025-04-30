@@ -5,7 +5,6 @@ import com.team1.mixIt.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,12 +47,8 @@ public class Post extends BaseEntity {
     @Column(name = "bookmark_count")
     private Integer bookmarkCount = 0;
 
-    @Builder.Default
-    @Column(name = "avg_rating", precision = 2, scale = 1)
-    private BigDecimal avgRating = BigDecimal.ZERO;
+    @Column(name = "avg_rating")
+    private double avgRating = 0.0;
 
-    public void setAvgRating(BigDecimal avgRating) {
-        this.avgRating = avgRating;
-    }
 
 }

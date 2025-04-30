@@ -4,6 +4,7 @@ log/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-
+src/main/resources/application-private.yml
+src/main/resources/application-email.yml
 
 .idea
