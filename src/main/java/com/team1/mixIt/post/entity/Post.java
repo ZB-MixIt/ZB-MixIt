@@ -50,4 +50,5 @@ public class Post extends BaseEntity {
     @Column(name = "avg_rating")
     private double avgRating = 0.0;
 
+
 }
