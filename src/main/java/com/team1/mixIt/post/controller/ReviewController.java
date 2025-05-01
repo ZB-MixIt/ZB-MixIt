@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,6 +34,8 @@ public class ReviewController {
             @ApiResponse(responseCode = "401", description = "인증 필요"),
             @ApiResponse(responseCode = "500", description = "서버 에러")
     })
+
+    @Validated
     @PostMapping
     public ResponseTemplate<ReviewResponse> create(
             @PathVariable Long postId,
@@ -50,6 +53,7 @@ public class ReviewController {
             @ApiResponse(responseCode = "401", description = "인증 필요"),
             @ApiResponse(responseCode = "500", description = "서버 에러")
     })
+    @Validated
     @PutMapping("/{reviewId}")
     public ResponseTemplate<ReviewResponse> update(
             @PathVariable Long postId,
