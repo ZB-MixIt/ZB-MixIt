@@ -1,5 +1,7 @@
 package com.team1.mixIt.post.service;
 
+import com.team1.mixIt.actionlog.entity.ActionLog;
+import com.team1.mixIt.actionlog.repository.ActionLogRepository;
 import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.post.dto.response.BookmarkResponse;
 import com.team1.mixIt.post.dto.response.BookmarkResponsePage;
@@ -22,6 +24,7 @@ import org.springframework.data.domain.Sort;
 public class PostBookmarkService {
     private final PostRepository postRepository;
     private final UserBookmarkRepository userBookmarkRepository;
+    private final ActionLogRepository actionLogRepository;
 
     @Transactional
     public void addBookmark(Long postId, User user) {
@@ -40,8 +43,17 @@ public class PostBookmarkService {
                             .build()
             );
             postRepository.increaseBookmarkCount(postId);
+
+            actionLogRepository.save(
+                    ActionLog.builder()
+                            .postId(postId)
+                            .userId(user.getId())
+                            .actionType("BOOKMARK")
+                            .build()
+            );
         }
     }
+
 
     @Transactional
     public void removeBookmark(Long postId, User user) {
@@ -49,6 +61,14 @@ public class PostBookmarkService {
         if (userBookmarkRepository.existsById(key)) {
             userBookmarkRepository.deleteById(key);
             postRepository.decreaseBookmarkCount(postId);
+
+            actionLogRepository.save(
+                    ActionLog.builder()
+                            .postId(postId)
+                            .userId(user.getId())
+                            .actionType("REMOVE_BOOKMARK")
+                            .build()
+            );
         }
     }
 

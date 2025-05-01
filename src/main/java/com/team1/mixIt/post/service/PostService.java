@@ -1,6 +1,8 @@
 // src/main/java/com/team1/mixIt/post/service/PostService.java
 package com.team1.mixIt.post.service;
 
+import com.team1.mixIt.actionlog.entity.ActionLog;
+import com.team1.mixIt.actionlog.repository.ActionLogRepository;
 import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.request.PostCreateRequest;
@@ -35,6 +37,7 @@ public class PostService {
     private final PostHashtagRepository hashtagRepository;
     private final PostLikeRepository postLikeRepository;
     private final ImageService imageService;
+    private final ActionLogRepository actionLogRepository;
 
     @Transactional
     public void createPost(Long userId, PostCreateRequest request) {
@@ -65,8 +68,18 @@ public class PostService {
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PostResponse getPostById(Long postId, Long currentUserId) {
+        postRepository.increaseViewCount(postId);
+
+        // 조회 로그 기록
+        actionLogRepository.save(ActionLog.builder()
+                .postId(postId)
+                .userId(currentUserId)
+                .actionType("VIEW")
+                .build());
+
+        //  조회
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("게시물이 없습니다."));
 
@@ -81,6 +94,7 @@ public class PostService {
         dto.setLikeCount(likeCount);
         return dto;
     }
+
 
     @Transactional(readOnly = true)
     public List<PostResponse> getAllPosts(
