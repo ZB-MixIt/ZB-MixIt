@@ -7,6 +7,8 @@ import com.team1.mixIt.post.dto.request.PostCreateRequest;
 import com.team1.mixIt.post.dto.request.PostUpdateRequest;
 import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.entity.Post;
+import com.team1.mixIt.post.entity.PostHashtag;
+import com.team1.mixIt.post.repository.PostHashtagRepository;
 import com.team1.mixIt.post.repository.PostLikeRepository;
 import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.user.entity.User;
@@ -30,6 +32,7 @@ public class PostService {
 
     private final UserRepository userRepository;
     private final PostRepository postRepository;
+    private final PostHashtagRepository hashtagRepository;
     private final PostLikeRepository postLikeRepository;
     private final ImageService imageService;
 
@@ -44,6 +47,17 @@ public class PostService {
                 .build();
         postRepository.save(post);
 
+        // 태그 매핑 처리
+        for (String tag : request.getTags()) {
+            PostHashtag ph = PostHashtag.builder()
+                    .post(post)
+                    .hashtag(tag)
+                    .build();
+            hashtagRepository.save(ph);
+            post.getHashtag().add(ph);
+        }
+
+        // 이미지 소유 처리
         if (nonNull(request.getImageIds()) && !request.getImageIds().isEmpty()) {
             List<Image> images = imageService.findAllById(request.getImageIds());
             User userProxy = userRepository.getReferenceById(userId);
@@ -109,6 +123,7 @@ public class PostService {
 
     @Transactional
     public void updatePost(Long userId, Long postId, PostUpdateRequest request) {
+        // 기존 이미지 관계 해제
         imageService.unassignAllFromPost(postId);
 
         Post post = postRepository.findById(postId)
@@ -116,10 +131,28 @@ public class PostService {
         if (!post.getUserId().equals(userId)) {
             throw new AccessDeniedException("내 글만 수정할 수 있습니다.");
         }
+
+        //기존 태그 모두 삭제
+        hashtagRepository.deleteByPost(post);
+        post.getHashtag().clear();
+
+        // 게시물 필드 업뎃
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
         post.setImageIds(nonNull(request.getImageIds()) ? request.getImageIds() : List.of());
 
+        // 새로운 태그 매핑
+        if (request.getTags() != null && !request.getTags().isEmpty()) {
+            for (String tag : request.getTags()) {
+                PostHashtag ph = PostHashtag.builder()
+                        .post(post)
+                        .hashtag(tag)
+                        .build();
+                hashtagRepository.save(ph);
+                post.getHashtag().add(ph);
+            }
+        }
+        // 새 이지미 관계 설정
         if (nonNull(request.getImageIds()) && !request.getImageIds().isEmpty()) {
             List<Image> newImgs = imageService.findAllById(request.getImageIds());
             User userProxy = userRepository.getReferenceById(userId);
