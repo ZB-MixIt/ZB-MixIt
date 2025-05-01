@@ -18,7 +18,7 @@ public class UserCreateDto {
     private String nickname;
     private Long imageId;
     private List<Integer> terms;
-
+ㅁ
     public static UserCreateDto of(UserAccountController.CreateUserRequest request) {
         return UserCreateDto.builder()
                 .loginId(request.getLoginId())
