@@ -22,7 +22,7 @@ public class PostLikeController {
 
     private final PostLikeService likeService;
 
-    @Operation(summary = "게시물 좋아요 등록", description = "게시물에 좋아요를 남깁니다.")
+    @Operation(summary = "게시물 좋아요 등록", description = "게시물에 좋아요를 남깁니다. + action_log에 LIKE 이벤트 기록")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "좋아요 등록 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청"),
@@ -40,7 +40,8 @@ public class PostLikeController {
         return ResponseTemplate.ok(resp);
     }
 
-    @Operation(summary = "게시물 좋아요 해제", description = "게시물에 남긴 좋아요를 취소합니다.")
+    @Operation(summary = "게시물 좋아요 해제",
+            description = "게시물에 남긴 좋아요를 취소합니다 + action_log에 UNLIKE 이벤트 기록")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "좋아요 해제 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청"),
