@@ -51,6 +51,7 @@ public class Post extends BaseEntity {
     private double avgRating = 0.0;
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<PostHashtag> hashtag = new ArrayList<>();
 
 }
