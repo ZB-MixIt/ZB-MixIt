@@ -3,6 +3,10 @@ package com.team1.mixIt.common.code;
 import com.team1.mixIt.email.exception.EmailNotVerifiedException;
 import com.team1.mixIt.email.exception.EmailVerificationCodeNotMatch;
 import com.team1.mixIt.email.exception.EmailVerificationHistoryNotFound;
+import com.team1.mixIt.image.exception.ImageNotFoundException;
+import com.team1.mixIt.image.exception.ImageOwnerAlreadyExistException;
+import com.team1.mixIt.term.exception.RequiredTermsNotProvidedException;
+import com.team1.mixIt.term.exception.TermsNotFoundException;
 import com.team1.mixIt.user.exception.DuplicateEmailException;
 import com.team1.mixIt.user.exception.DuplicateLoginIdException;
 import com.team1.mixIt.user.exception.DuplicateNicknameException;
@@ -94,6 +98,42 @@ public enum ResponseCode {
             HttpStatus.BAD_REQUEST,
             new Class[] {
                     EmailVerificationCodeNotMatch.class
+            }
+    ),
+
+    TERMS_NOT_FOUND(
+            "300_001",
+            "Terms not found",
+            HttpStatus.BAD_REQUEST,
+            new Class[] {
+                    TermsNotFoundException.class
+            }
+    ),
+
+    REQUIRED_TERMS_NOT_PROVIDED(
+            "300_002",
+            "Required terms not provided",
+            HttpStatus.BAD_REQUEST,
+            new Class[] {
+                    RequiredTermsNotProvidedException.class
+            }
+    ),
+
+    IMAGE_NOT_FOUND(
+            "400_001",
+            "Image not found",
+            HttpStatus.BAD_REQUEST,
+            new Class[] {
+                    ImageNotFoundException.class
+            }
+    ),
+
+    IMAGE_OWNER_ALREADY_EXIST(
+            "400_002",
+            "Image owner already exists",
+            HttpStatus.BAD_REQUEST,
+            new Class[] {
+                    ImageOwnerAlreadyExistException.class
             }
     ),
 

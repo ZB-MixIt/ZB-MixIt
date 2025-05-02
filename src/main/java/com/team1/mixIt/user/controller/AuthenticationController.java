@@ -34,6 +34,9 @@ public class AuthenticationController {
 
         return ResponseTemplate.ok(
                 LoginResponse.builder()
+                        .loginId(user.getLoginId())
+                        .name(user.getName())
+                        .nickname(user.getNickname())
                         .token(token)
                         .expiresIn(jwtService.getExpirationTime())
                         .build()
@@ -67,6 +70,9 @@ public class AuthenticationController {
     @Builder
     @AllArgsConstructor
     public static class LoginResponse {
+        private String loginId;
+        private String nickname;
+        private String name;
         private String token;
         private long expiresIn;
     }

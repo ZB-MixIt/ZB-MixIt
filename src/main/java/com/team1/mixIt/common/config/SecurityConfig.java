@@ -37,6 +37,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(customizer -> customizer
                         .requestMatchers(HttpMethod.PUT, "/api/v1/accounts/password").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/images").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/terms").permitAll()
                         .requestMatchers(AUTH_WHITELIST).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)

@@ -16,7 +16,6 @@ import java.util.Objects;
 
 @Table(name = "users")
 @Entity
-
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -38,10 +37,6 @@ public class User extends BaseEntity implements UserDetails  {
     private LocalDate birthdate;
 
     private String email;
-
-    private String phoneNumber;
-
-    private boolean phoneVerified;
 
     @OneToOne
     @JoinColumn(name = "profile_image_id")

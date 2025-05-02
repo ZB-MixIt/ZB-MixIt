@@ -118,7 +118,6 @@ public class UserAccountController {
         private String nickname;
 
         @Email
-        @NotNull
         private String email;
     }
 

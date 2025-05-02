@@ -1,0 +1,5 @@
+FROM mysql:latest
+
+ADD table.sql       /docker-entrypoint-initdb.d/01-table.sql
+ADD init-data.sql   /docker-entrypoint-initdb.d/02-init-data.sql
+EXPOSE 3307

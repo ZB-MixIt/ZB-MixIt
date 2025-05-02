@@ -2,7 +2,6 @@ package com.team1.mixIt.user.controller;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.user.entity.User;
-import com.team1.mixIt.user.repository.UserRepository;
 import com.team1.mixIt.user.service.UserService;
 import com.team1.mixIt.utils.DateUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,7 +14,6 @@ import org.hibernate.validator.constraints.Length;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
 import java.util.Objects;
 
 @Tag(name = "User My Page")
@@ -75,7 +73,6 @@ public class UserMyPageController {
         private String loginId;
         private String name;
         private String birth;
-        private String phoneNum;
         private String email;
         private String nickname;
         private Image image;
@@ -85,7 +82,6 @@ public class UserMyPageController {
                     .loginId(user.getLoginId())
                     .name(user.getName())
                     .birth(DateUtils.yyMMdd(user.getBirthdate()))
-                    .phoneNum(user.getPhoneNumber())
                     .email(user.getEmail())
                     .nickname(user.getNickname());
 

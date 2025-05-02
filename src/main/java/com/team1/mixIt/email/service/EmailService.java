@@ -59,7 +59,7 @@ public class EmailService {
 
     public void checkIsEmailVerified(String email) {
         EmailVerificationData data = getVerifyEmailData(email);
-        if (data != null && data.isVerified()) throw new EmailNotVerifiedException();
+        if (data == null || !data.isVerified()) throw new EmailNotVerifiedException();
     }
 
     public void deleteVerifiedHistory(String email) {

@@ -2,7 +2,10 @@ package com.team1.mixIt.user.service;
 
 import com.team1.mixIt.email.service.EmailService;
 import com.team1.mixIt.image.entity.Image;
+import com.team1.mixIt.image.exception.ImageNotFoundException;
+import com.team1.mixIt.image.exception.ImageOwnerAlreadyExistException;
 import com.team1.mixIt.image.repository.ImageRepository;
+import com.team1.mixIt.term.service.UserTermsService;
 import com.team1.mixIt.user.dto.UserCreateDto;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.exception.*;
@@ -21,6 +24,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserAccountService {
     private final EmailService emailService;
+    private final UserTermsService userTermsService;
+
     private final PasswordEncoder passwordEncoder;
 
     private final UserRepository userRepository;
@@ -38,6 +43,7 @@ public class UserAccountService {
         userRepository.findByNickname(dto.getNickname()).ifPresent(v -> {throw new DuplicateNicknameException(dto.getNickname());});
 
         emailService.checkIsEmailVerified(dto.getEmail());
+        userTermsService.checkRequiredTerms(dto.getTerms());
 
         User user = User.builder()
                 .loginId(dto.getLoginId())
@@ -49,14 +55,14 @@ public class UserAccountService {
                 .build();
 
         if (Objects.nonNull(dto.getImageId())) {
-            Image image = imageRepository.findById(dto.getImageId()).orElseThrow();// Todo Exception 정의
+            Image image = imageRepository.findById(dto.getImageId()).orElseThrow(ImageNotFoundException::new);
 
-            if (Objects.nonNull(image.getUser())) throw new RuntimeException(); // Todo Exception 정의
+            if (Objects.nonNull(image.getUser())) throw new ImageOwnerAlreadyExistException();
             user.updateProfileImage(image);
         }
 
         user = userRepository.save(user);
-        // Todo 약관 관련 추가
+        userTermsService.agreeTerms(dto.getTerms(), user);
         emailService.deleteVerifiedHistory(dto.getEmail());
         return user;
     }
