@@ -39,15 +39,18 @@ public class Post extends BaseEntity {
     private List<Long> imageIds = new ArrayList<>();
 
     @Column(name = "view_count")
+    @Builder.Default
     private Integer viewCount = 0;
 
     @Column(name= "like_count")
     private long likeCount;
 
     @Column(name = "bookmark_count")
+    @Builder.Default
     private Integer bookmarkCount = 0;
 
     @Column(name = "avg_rating")
+    @Builder.Default
     private double avgRating = 0.0;
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)

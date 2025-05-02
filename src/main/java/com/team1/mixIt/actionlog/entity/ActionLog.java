@@ -24,5 +24,6 @@ public class ActionLog extends BaseEntity {
     private String actionType;//bookmark, like, view
 
     @Column(name = "action_time", nullable = false)
+    @Builder.Default
     private LocalDateTime actionTime = LocalDateTime.now();
 }

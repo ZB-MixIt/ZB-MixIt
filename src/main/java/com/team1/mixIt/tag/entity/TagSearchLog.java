@@ -25,6 +25,7 @@ public class TagSearchLog {
     private String tag;
 
     @Column(name = "searched_at", nullable = false)
+    @Builder.Default
     private LocalDateTime searchedAt = LocalDateTime.now();
 
     @ManyToOne(fetch = FetchType.LAZY)
