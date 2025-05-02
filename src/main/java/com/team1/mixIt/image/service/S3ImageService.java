@@ -8,6 +8,8 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.util.IOUtils;
 import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.image.repository.ImageRepository;
+import com.team1.mixIt.post.entity.Post;
+import com.team1.mixIt.post.entity.Review;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -51,7 +54,8 @@ public class S3ImageService implements ImageService {
             throw new RuntimeException(); // Todo Exception 정의
         }
 
-        if(!this.validateExtension(file.getOriginalFilename())) throw new RuntimeException(); // Todo Exception 정의
+        if (!this.validateExtension(file.getOriginalFilename()))
+            throw new RuntimeException(); // Todo Exception 정의
 
         String src;
         try {
@@ -77,7 +81,8 @@ public class S3ImageService implements ImageService {
 
     @Override
     public void delete(Image image, User user) {
-        if (image.getUser() != user) throw new RuntimeException(); // Todo Exception 정의
+        if (image.getUser() != user)
+            throw new RuntimeException(); // Todo Exception 정의
         delete(image);
     }
 
@@ -100,7 +105,9 @@ public class S3ImageService implements ImageService {
 
     @Override
     public void setOwner(List<Image> images, User user) {
-        images.forEach(image -> {image.updateUser(user);});
+        images.forEach(image -> {
+            image.updateUser(user);
+        });
         imageRepository.saveAll(images);
     }
 
@@ -118,14 +125,14 @@ public class S3ImageService implements ImageService {
         metadata.setContentLength(bytes.length);
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
 
-        try{
+        try {
             PutObjectRequest putObjectRequest =
                     new PutObjectRequest(bucketName, s3FileName, byteArrayInputStream, metadata)
                             .withCannedAcl(CannedAccessControlList.PublicRead);
             amazonS3.putObject(putObjectRequest);
-        }catch (Exception e){
+        } catch (Exception e) {
             throw new RuntimeException(e); // Todo Exception 정의
-        }finally {
+        } finally {
             byteArrayInputStream.close();
             is.close();
         }
@@ -146,11 +153,11 @@ public class S3ImageService implements ImageService {
     }
 
     private String getKey(String urlStr) {
-        try{
+        try {
             URL url = new URL(urlStr);
             String decodingKey = URLDecoder.decode(url.getPath(), StandardCharsets.UTF_8);
             return decodingKey.substring(1);
-        }catch (MalformedURLException e){
+        } catch (MalformedURLException e) {
             throw new RuntimeException(e); // Todo Exception 정의
         }
     }
@@ -161,12 +168,14 @@ public class S3ImageService implements ImageService {
     }
 
     @Override
-    public void unassignAllFromPost(Long postId) {
-        List<Image> images = imageRepository.findByPostId(postId);
-        for (Image img : images) {
-            img.updateReview(null);
-            img.updateUser(null);
+    public void updateAssignedImages(List<Long> originalIds, List<Long> newIds) {
+        List<Long> toDelete = originalIds.stream()
+                .filter(id -> !newIds.contains(id))
+                .collect(Collectors.toList());
+
+        if (!toDelete.isEmpty()) {
+            List<Image> images = imageRepository.findAllByIdIn(toDelete);
+            images.forEach(this::delete);
         }
-        imageRepository.saveAll(images);
     }
 }

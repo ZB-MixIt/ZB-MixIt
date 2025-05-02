@@ -10,7 +10,6 @@ public class TagStatsBatchService {
 
     private final TagStatsService tagStatsService;
 
-
     @Scheduled(cron = "0 0 0 * * *")
     public void dailyAggregate() {
         // 최근 1일 데이터 기준

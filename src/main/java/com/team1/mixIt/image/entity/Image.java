@@ -21,16 +21,10 @@ public class Image extends BaseEntity {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "review_id")
-    private Review review;
-
     @Column(nullable = false)
     private String url;
 
     public void updateUser(User user) {
         this.user = user;
     }
-
-    public void updateReview(Review review) {this.review = review;}
 }

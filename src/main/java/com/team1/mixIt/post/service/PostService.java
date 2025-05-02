@@ -41,14 +41,19 @@ public class PostService {
 
     @Transactional
     public void createPost(Long userId, PostCreateRequest request) {
+
+        List<Long> newImageIds = nonNull(request.getImageIds())
+                ? request.getImageIds()
+                : List.of();
+
         Post post = Post.builder()
                 .userId(userId)
                 .category(request.getCategory())
                 .title(request.getTitle())
                 .content(request.getContent())
-                .imageIds(nonNull(request.getImageIds()) ? request.getImageIds() : List.of())
+                .imageIds(newImageIds)
                 .build();
-        postRepository.save(post);
+        post = postRepository.save(post);
 
         // 태그 매핑 처리
         for (String tag : request.getTags()) {
@@ -61,8 +66,8 @@ public class PostService {
         }
 
         // 이미지 소유 처리
-        if (nonNull(request.getImageIds()) && !request.getImageIds().isEmpty()) {
-            List<Image> images = imageService.findAllById(request.getImageIds());
+        if (!newImageIds.isEmpty()) {
+            List<Image> images = imageService.findAllById(newImageIds);
             User userProxy = userRepository.getReferenceById(userId);
             imageService.setOwner(images, userProxy);
         }
@@ -137,8 +142,6 @@ public class PostService {
 
     @Transactional
     public void updatePost(Long userId, Long postId, PostUpdateRequest request) {
-        // 기존 이미지 관계 해제
-        imageService.unassignAllFromPost(postId);
 
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("게시물이 없습니다."));
@@ -146,16 +149,16 @@ public class PostService {
             throw new AccessDeniedException("내 글만 수정할 수 있습니다.");
         }
 
-        //기존 태그 모두 삭제
-        hashtagRepository.deleteByPost(post);
-        post.getHashtag().clear();
+        List<Long> original = post.getImageIds();
+        List<Long> newImageIds = nonNull(request.getImageIds()) ? request.getImageIds() : List.of();
+        imageService.updateAssignedImages(original, newImageIds);
 
-        // 게시물 필드 업뎃
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
-        post.setImageIds(nonNull(request.getImageIds()) ? request.getImageIds() : List.of());
+        post.setImageIds(newImageIds);
 
-        // 새로운 태그 매핑
+        hashtagRepository.deleteByPost(post);
+        post.getHashtag().clear();
         if (request.getTags() != null && !request.getTags().isEmpty()) {
             for (String tag : request.getTags()) {
                 PostHashtag ph = PostHashtag.builder()
@@ -166,9 +169,9 @@ public class PostService {
                 post.getHashtag().add(ph);
             }
         }
-        // 새 이지미 관계 설정
-        if (nonNull(request.getImageIds()) && !request.getImageIds().isEmpty()) {
-            List<Image> newImgs = imageService.findAllById(request.getImageIds());
+
+        if (!newImageIds.isEmpty()) {
+            List<Image> newImgs = imageService.findAllById(newImageIds);
             User userProxy = userRepository.getReferenceById(userId);
             imageService.setOwner(newImgs, userProxy);
         }

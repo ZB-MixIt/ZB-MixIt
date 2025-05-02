@@ -1,5 +1,6 @@
 package com.team1.mixIt.post.entity;
 
+import com.team1.mixIt.common.config.ImageIdListConverter;
 import com.team1.mixIt.common.entity.BaseEntity;
 import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.user.entity.User;
@@ -16,6 +17,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Review extends BaseEntity {
     @Id
     @GeneratedValue
@@ -35,14 +37,8 @@ public class Review extends BaseEntity {
     @Column(nullable = false, precision = 3, scale = 1)
     private BigDecimal rate;
 
-    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Image> images = new ArrayList<>();
-
-    @Builder
-    public Review(User user, Post post, String content, BigDecimal rate) {
-        this.user = user;
-        this.post = post;
-        this.content = content;
-        this.rate = rate;
-    }
+    @Convert(converter = ImageIdListConverter.class)
+    @Column(name = "image_ids", columnDefinition = "JSON")
+    @Builder.Default
+    private List<Long> imageIds = new ArrayList<>();
 }

@@ -54,7 +54,6 @@ public class PostBookmarkService {
         }
     }
 
-
     @Transactional
     public void removeBookmark(Long postId, User user) {
         UserBookmarkId key = new UserBookmarkId(user.getId(), postId);

@@ -9,6 +9,5 @@ import java.util.List;
 public interface ImageRepository extends JpaRepository<Image, Long> {
     List<Image> findByUserIsNullAndCreatedAtBefore(LocalDateTime cutoff);
 
-    // 리뷰에 매핑된 이미지 조회
-    List<Image> findByPostId(Long postId);
+    List<Image> findAllByIdIn(List<Long> ids);
 }

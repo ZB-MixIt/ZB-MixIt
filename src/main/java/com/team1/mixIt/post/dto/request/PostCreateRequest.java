@@ -24,14 +24,14 @@ public class PostCreateRequest {
     @NotBlank(message = "게시물 제목은 필수입니다.")
     @Size(max = 20, message = "게시물 제목은 20자 이내로 입력해 주세요.")
     @NoPersonalInfo
-    @NoBannedWords
+    @NoBannedWords(message = "금지된 단어가 포함되어 있습니다.")
     @Schema(description = "게시물 제목 (최대 20자)", example = "서브웨이 꿀조합")
     private String title;
 
     @NotBlank(message = "게시물 내용은 필수입니다.")
     @Size(max = 5000, message = "게시물 내용은 5000자 이내로 입력해 주세요.")
     @NoPersonalInfo
-    @NoBannedWords
+    @NoBannedWords(message = "금지된 단어가 포함되어 있습니다.")
     @Schema(description = "게시물 내용")
     private String content;
 
