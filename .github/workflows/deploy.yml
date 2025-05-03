@@ -42,14 +42,23 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            #!/bin/bash
-            APP_JAR="/home/${{ secrets.EC2_USERNAME }}/mixit/mixit.jar"
-            # (1) 이미 실행 중인 프로세스 있으면 종료
-            if pgrep -f "$APP_JAR"; then
+            APP_DIR="/home/${{ secrets.EC2_USERNAME }}/mixit"
+            # mixit 폴더에 있는 첫 번째 JAR 파일 경로 탐색
+            JAR_FILE=$(ls "$APP_DIR"/*.jar | head -n1)
+
+            echo ">>> Found JAR: $JAR_FILE"
+            if [ -z "$JAR_FILE" ]; then
+              echo "Error: JAR 파일을 찾을 수 없습니다!"
+              exit 1
+            fi
+
+            # 이미 실행 중인 프로세스가 있으면 종료
+            if pgrep -f "$JAR_FILE"; then
               echo "Stopping existing application..."
-              pkill -f "$APP_JAR"
+              pkill -f "$JAR_FILE"
               sleep 5
             fi
+
+            # 백그라운드로 실행
             echo "Starting application..."
-            java -jar "$APP_JAR" --spring.profiles.active=develop &
-            echo "Application started."
+            java -jar "$JAR_FILE" --spring.profiles.active=develop &
