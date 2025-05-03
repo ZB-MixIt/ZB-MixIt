@@ -1,7 +1,6 @@
 // src/main/java/com/team1/mixIt/log/entity/ActionLog.java
 package com.team1.mixIt.actionlog.entity;
 
-import com.team1.mixIt.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -10,7 +9,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "action_log")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class ActionLog extends BaseEntity {
+public class ActionLog {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
