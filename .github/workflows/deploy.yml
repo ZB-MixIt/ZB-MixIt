@@ -33,24 +33,23 @@ jobs:
           target: /home/${{ secrets.EC2_USERNAME }}/mixit/mixit.jar
 
       # 5) EC2에서 기존 프로세스 종료 & 새 프로세스 실행
-#      - name: Restart Spring Boot on EC2
-#        uses: appleboy/ssh-action@v0.1.5
-#        with:
-#          host: ${{ secrets.EC2_HOST }}
-#          username: ${{ secrets.EC2_USERNAME }}
-#          key: ${{ secrets.EC2_KEY }}
-#          port: 22
-#          script: |
-#            #!/bin/bash
-#            APP_JAR="/home/${{ secrets.EC2_USER }}/mixit/mixit.jar"
-#            # (1) 이미 실행 중인 프로세스 있으면 종료
-#            if pgrep -f "$APP_JAR"; then
-#              echo "Stopping existing application..."
-#              pkill -f "$APP_JAR"
-#              sleep 5
-#            fi
-#            echo "Starting application..."
-#            nohup java -jar "$APP_JAR" \
-#              --spring.profiles.active=prod \
-#              > /home/${{ secrets.EC2_USER }}/app/logs/app.log 2>&1 &
-#            echo "Application started."
+      - name: Restart Spring Boot on EC2
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_KEY }}
+          port: 22
+          script: |
+            #!/bin/bash
+            APP_JAR="/home/${{ secrets.EC2_USER }}/mixit/mixit.jar"
+            # (1) 이미 실행 중인 프로세스 있으면 종료
+            if pgrep -f "$APP_JAR"; then
+              echo "Stopping existing application..."
+              pkill -f "$APP_JAR"
+              sleep 5
+            fi
+            echo "Starting application..."
+            nohup java -jar "$APP_JAR" \
+              --spring.profiles.active=develop
+            echo "Application started."
