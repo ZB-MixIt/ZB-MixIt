@@ -40,12 +40,12 @@ public class PostController {
     })
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseTemplate<Void> createPost(
+    public ResponseTemplate<Long> createPost(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody PostCreateRequest dto
     ) {
-        postService.createPost(user.getId(), dto);
-        return ResponseTemplate.ok();
+        Long postId = postService.createPost(user.getId(), dto);
+        return ResponseTemplate.ok(postId);
     }
 
     @Operation(summary = "게시물 목록 조회", description = "모든 게시물을 조회합니다.")
@@ -57,10 +57,12 @@ public class PostController {
             @RequestParam(required = false) String type,                   // 인기순, 추천순
             @RequestParam(required = false) String keyword,                // 제목·내용 검색어
             @RequestParam(defaultValue = "createdAt") String sortBy,       // 정렬 기준
-            @RequestParam(defaultValue = "desc") String sortDir
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
         List<PostResponse> list = postService.getAllPosts(
-                user.getId(), category, type, keyword, sortBy, sortDir
+                user.getId(), category, type, keyword, sortBy, sortDir, page, size
         );
         return ResponseTemplate.ok(list);
     }

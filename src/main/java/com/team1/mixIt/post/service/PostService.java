@@ -15,6 +15,9 @@ import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -39,7 +42,7 @@ public class PostService {
     private final ActionLogRepository actionLogRepository;
 
     @Transactional
-    public void createPost(Long userId, PostCreateRequest request) {
+    public Long createPost(Long userId, PostCreateRequest request) {
 
         List<Long> newImageIds = nonNull(request.getImageIds())
                 ? request.getImageIds()
@@ -70,6 +73,7 @@ public class PostService {
             User userProxy = userRepository.getReferenceById(userId);
             imageService.setOwner(images, userProxy);
         }
+        return post.getId();
     }
 
     @Transactional
@@ -107,10 +111,14 @@ public class PostService {
             String type,
             String keyword,
             String sortBy,
-            String sortDir
+            String sortDir,
+            int page,
+            int size
     ) {
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
-        var posts = postRepository.findAll((root, query, cb) -> {
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Post> postPage = postRepository.findAll((root, query, cb) -> {
             var predicates = new ArrayList<Predicate>();
             if (category != null) {
                 predicates.add(cb.equal(root.get("category"), category));
@@ -123,9 +131,9 @@ public class PostService {
                 ));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
-        }, sort);
+        }, pageable);
 
-        return posts.stream()
+        return postPage.stream()
                 .map(post -> {
                     PostResponse dto = PostResponse.fromEntity(post);
                     boolean hasLiked = postLikeRepository
@@ -136,7 +144,7 @@ public class PostService {
                     dto.setLikeCount(likeCount);
                     return dto;
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Transactional

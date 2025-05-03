@@ -119,6 +119,13 @@ public enum ResponseCode {
             }
     ),
 
+    BAD_REQUEST(
+            "400_000",
+            "Bad request",
+            HttpStatus.BAD_REQUEST,
+            null
+    ),
+
     IMAGE_NOT_FOUND(
             "400_001",
             "Image not found",
@@ -136,6 +143,27 @@ public enum ResponseCode {
                     ImageOwnerAlreadyExistException.class
             }
     ),
+    // 인증인가 및 토큰 오류 추가
+    UNAUTHORIZED(
+            "401_000",
+            "Unauthorized",
+            HttpStatus.UNAUTHORIZED,
+            null
+    ),
+
+    FORBIDDEN(
+            "403_000",
+            "Forbidden",
+            HttpStatus.FORBIDDEN,
+            null
+    ),
+
+    INVALID_TOKEN(
+            "498_000",
+            "Invalid or expired token",
+            HttpStatus.UNAUTHORIZED,
+            null
+    ),
 
     INTERNAL_SERVER_ERROR(
             "500_000",
@@ -143,7 +171,6 @@ public enum ResponseCode {
             HttpStatus.INTERNAL_SERVER_ERROR,
             null
     );
-
 
     private final String code;
     private final String message;
