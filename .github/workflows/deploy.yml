@@ -27,7 +27,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_KEY }}
+          key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           source: build/libs/*.jar
           target: /home/${{ secrets.EC2_USERNAME }}/mixit/mixit.jar
