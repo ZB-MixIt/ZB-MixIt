@@ -2,6 +2,7 @@ package com.team1.mixIt.post.dto.request;
 
 import com.team1.mixIt.common.validation.NoBannedWords;
 import com.team1.mixIt.common.validation.NoPersonalInfo;
+import com.team1.mixIt.post.enums.Category;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -18,8 +19,12 @@ import java.util.List;
 public class PostCreateRequest {
 
     @NotNull(message = "카테고리는 필수값입니다.")
-    @Schema(description = "게시물 카테고리", example = "카페")
-    private String category;
+    @Schema(
+            description = "게시물 카테고리",
+            example = "카페",
+            allowableValues = {"카페","음식점","편의점","기타"}
+    )
+    private Category category;
 
     @NotBlank(message = "게시물 제목은 필수입니다.")
     @Size(max = 20, message = "게시물 제목은 20자 이내로 입력해 주세요.")

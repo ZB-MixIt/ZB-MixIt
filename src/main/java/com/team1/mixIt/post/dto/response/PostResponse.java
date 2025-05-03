@@ -1,6 +1,7 @@
 package com.team1.mixIt.post.dto.response;
 
 import com.team1.mixIt.post.entity.Post;
+import com.team1.mixIt.post.enums.Category;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,7 +22,7 @@ public class PostResponse {
     private Long userId;
 
     @Schema(description = "카테고리", example = "카페")
-    private String category;
+    private Category category;
 
     @Schema(description = "게시물 제목", example = "게시물 제목")
     private String title;
@@ -44,10 +45,6 @@ public class PostResponse {
     @Schema(description = "북마크 수", example = "0")
     private Integer bookmarkCount;
 
-    /**
-     * Post 엔티티를 PostResponse로 변환하는 팩토리 메서드
-     * hasLiked, likeCount는 서비스 레이어에서 별도 세팅
-     */
     public static PostResponse fromEntity(Post p) {
         return PostResponse.builder()
                 .id(p.getId())

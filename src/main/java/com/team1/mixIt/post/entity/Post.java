@@ -2,20 +2,16 @@ package com.team1.mixIt.post.entity;
 
 import com.team1.mixIt.common.config.ImageIdListConverter;
 import com.team1.mixIt.common.entity.BaseEntity;
+import com.team1.mixIt.post.enums.Category;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
-
 @Entity
 @Table(name = "post")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Post extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,8 +20,8 @@ public class Post extends BaseEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(nullable = false, length = 50)
-    private String category;
+    @Enumerated(EnumType.STRING)
+    private Category category;
 
     @Column(nullable = false, length = 100)
     private String title;
@@ -42,7 +38,7 @@ public class Post extends BaseEntity {
     @Builder.Default
     private Integer viewCount = 0;
 
-    @Column(name= "like_count")
+    @Column(name = "like_count")
     private long likeCount;
 
     @Column(name = "bookmark_count")
@@ -56,5 +52,4 @@ public class Post extends BaseEntity {
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<PostHashtag> hashtag = new ArrayList<>();
-
 }

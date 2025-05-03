@@ -5,8 +5,8 @@ import com.team1.mixIt.tag.dto.response.TagStatResponse;
 import com.team1.mixIt.tag.entity.TagStats;
 import com.team1.mixIt.tag.repository.TagStatsRepository;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.*;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -38,8 +38,8 @@ public class TagStatsController {
     })
     @GetMapping
     public ResponseTemplate<List<TagStatResponse>> topTags(
-            @Parameter(description = "가져올 태그 개수", example = "10")
-            @RequestParam(defaultValue = "10") int limit
+            @RequestParam(defaultValue = "3")
+            int limit
     ) {
         var page = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "useCount"));
         List<TagStats> stats = statsRepo.findAll(page).getContent();

@@ -9,24 +9,23 @@ import com.team1.mixIt.post.dto.request.PostUpdateRequest;
 import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.entity.PostHashtag;
+import com.team1.mixIt.post.enums.Category;
 import com.team1.mixIt.post.repository.PostHashtagRepository;
 import com.team1.mixIt.post.repository.PostLikeRepository;
 import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.repository.UserRepository;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.criteria.Predicate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static java.util.Objects.nonNull;
 
@@ -43,6 +42,7 @@ public class PostService {
 
     @Transactional
     public Long createPost(Long userId, PostCreateRequest request) {
+        Category cat = request.getCategory();
 
         List<Long> newImageIds = nonNull(request.getImageIds())
                 ? request.getImageIds()
@@ -50,14 +50,14 @@ public class PostService {
 
         Post post = Post.builder()
                 .userId(userId)
-                .category(request.getCategory())
+                .category(cat)
                 .title(request.getTitle())
                 .content(request.getContent())
                 .imageIds(newImageIds)
                 .build();
         post = postRepository.save(post);
 
-        // 태그 매핑 처리
+        // 태그 매핑
         for (String tag : request.getTags()) {
             PostHashtag ph = PostHashtag.builder()
                     .post(post)
@@ -67,34 +67,32 @@ public class PostService {
             post.getHashtag().add(ph);
         }
 
-        // 이미지 소유 처리
+        // 이미지 소유권 할당
         if (!newImageIds.isEmpty()) {
             List<Image> images = imageService.findAllById(newImageIds);
             User userProxy = userRepository.getReferenceById(userId);
             imageService.setOwner(images, userProxy);
         }
+
         return post.getId();
     }
 
     @Transactional
     public PostResponse getPostById(Long postId, Long currentUserId) {
         postRepository.increaseViewCount(postId);
-
-        // 조회 로그 기록
         actionLogRepository.save(ActionLog.builder()
                 .postId(postId)
                 .userId(currentUserId)
                 .actionType("VIEW")
-                .build());
+                .build()
+        );
 
-        //  조회
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("게시물이 없습니다."));
 
         boolean hasLiked = postLikeRepository
                 .findByPostIdAndUserId(postId, currentUserId)
                 .isPresent();
-
         long likeCount = postLikeRepository.countByPostId(postId);
 
         PostResponse dto = PostResponse.fromEntity(post);
@@ -103,12 +101,10 @@ public class PostService {
         return dto;
     }
 
-
     @Transactional(readOnly = true)
     public List<PostResponse> getAllPosts(
             Long currentUserId,
-            String category,
-            String type,
+            Category category,
             String keyword,
             String sortBy,
             String sortDir,
@@ -119,18 +115,27 @@ public class PostService {
         Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<Post> postPage = postRepository.findAll((root, query, cb) -> {
-            var predicates = new ArrayList<Predicate>();
+            List<Predicate> predicates = new ArrayList<>();
+
+            // 카테고리 필터
             if (category != null) {
                 predicates.add(cb.equal(root.get("category"), category));
             }
+
+            // 키워드 검색 -> 수정 제목 또는 태그
             if (keyword != null) {
                 String like = "%" + keyword + "%";
-                predicates.add(cb.or(
-                        cb.like(root.get("title"), like),
-                        cb.like(root.get("content"), like)
-                ));
+                Predicate titleMatch = cb.like(root.get("title"), like);
+
+                Join<Post, PostHashtag> tagJoin = root.join("hashtag", JoinType.LEFT);
+                Predicate tagMatch = cb.like(tagJoin.get("hashtag"), like);
+
+                predicates.add(cb.or(titleMatch, tagMatch));
+                query.distinct(true);
             }
-            return cb.and(predicates.toArray(new Predicate[0]));
+
+            Predicate[] arr = predicates.toArray(new Predicate[0]);
+            return cb.and(arr);
         }, pageable);
 
         return postPage.stream()
@@ -149,24 +154,27 @@ public class PostService {
 
     @Transactional
     public void updatePost(Long userId, Long postId, PostUpdateRequest request) {
-
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("게시물이 없습니다."));
         if (!post.getUserId().equals(userId)) {
             throw new AccessDeniedException("내 글만 수정할 수 있습니다.");
         }
 
-        List<Long> original = post.getImageIds();
-        List<Long> newImageIds = nonNull(request.getImageIds()) ? request.getImageIds() : List.of();
-        imageService.updateAssignedImages(original, newImageIds);
+        Category cat = request.getCategory();
+        post.setCategory(cat);
 
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
+
+        List<Long> original = post.getImageIds();
+        List<Long> newImageIds = nonNull(request.getImageIds()) ? request.getImageIds() : List.of();
+        imageService.updateAssignedImages(original, newImageIds);
         post.setImageIds(newImageIds);
 
+        // 태그 재설정
         hashtagRepository.deleteByPost(post);
         post.getHashtag().clear();
-        if (request.getTags() != null && !request.getTags().isEmpty()) {
+        if (nonNull(request.getTags())) {
             for (String tag : request.getTags()) {
                 PostHashtag ph = PostHashtag.builder()
                         .post(post)
@@ -177,6 +185,7 @@ public class PostService {
             }
         }
 
+        // 새 이미지 소유권
         if (!newImageIds.isEmpty()) {
             List<Image> newImgs = imageService.findAllById(newImageIds);
             User userProxy = userRepository.getReferenceById(userId);
