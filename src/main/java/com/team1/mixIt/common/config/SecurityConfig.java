@@ -5,7 +5,6 @@ import com.team1.mixIt.common.filter.LoggingFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -36,11 +35,12 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(customizer -> customizer
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/accounts/password").authenticated()
+                        .anyRequest().permitAll())
+                        /*.requestMatchers(HttpMethod.PUT, "/api/v1/accounts/password").authenticated() // Todo 테스트 이후 인증 다시 걸기
                         .requestMatchers(HttpMethod.POST, "/api/v1/images").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/terms").permitAll()
                         .requestMatchers(AUTH_WHITELIST).permitAll()
-                        .anyRequest().authenticated())
+                        .anyRequest().authenticated())*/
                 .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new LoggingFilter(), JwtAuthenticationFilter.class)
                 .authenticationProvider(authenticationProvider)
