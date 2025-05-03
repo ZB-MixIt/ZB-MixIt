@@ -1,6 +1,7 @@
 package com.team1.mixIt.common.config;
 
 import com.team1.mixIt.common.filter.JwtAuthenticationFilter;
+import com.team1.mixIt.common.filter.LoggingFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -46,7 +47,9 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults());
+                .cors(Customizer.withDefaults())
+                .addFilterBefore(new LoggingFilter(), UsernamePasswordAuthenticationFilter.class)
+        ;
 
         return http.build();
     }
