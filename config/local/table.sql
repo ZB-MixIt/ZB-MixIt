@@ -46,13 +46,15 @@ CREATE TABLE `post` (
   `content` text NOT NULL COMMENT '게시물 내용',
   `image_ids` json COMMENT '첨부 이미지 URL 목록 등 (JSON 형식)',
   `view_count` int DEFAULT 0 COMMENT '게시물 조회수',
-  `like_count` int DEFAULT 0 COMMENT '게시물 좋아요 수',
+  `like_count` bigint DEFAULT 0 COMMENT '게시물 좋아요 수',
+  `avg_rating` double DEFAULT 0.0,
   `bookmark_count` int DEFAULT 0 COMMENT '게시물 북마크 수',
   `created_at` datetime DEFAULT (now()) COMMENT '게시물 작성 시각',
   `modified_at` datetime DEFAULT (now()) COMMENT '게시물 수정 시각'
 );
 
 CREATE TABLE `post_hashtag` (
+  `id` bigint PRIMARY KEY AUTO_INCREMENT,
   `post_id` bigint NOT NULL COMMENT '해당 태그가 적용된 게시물 아이디',
   `hashtag` varchar(50) NOT NULL COMMENT '게시물에 달린 태그 (최대 50자)',
   `created_at` datetime DEFAULT (now()) COMMENT '태그 등록 시각',
@@ -80,6 +82,7 @@ CREATE TABLE `review` (
   `post_id` bigint NOT NULL COMMENT '리뷰 대상 게시물의 아이디',
   `content` text NOT NULL COMMENT '리뷰 내용',
   `rate` decimal(3,1) NOT NULL COMMENT '게시물에 대한 총 평점',
+  `image_ids` json COMMENT '첨부 이미지 URL 목록 등 (JSON 형식)',
   `created_at` datetime DEFAULT (now()) COMMENT '리뷰 작성 시각',
   `modified_at` datetime DEFAULT (now()) COMMENT '리뷰 수정 시각'
 );
