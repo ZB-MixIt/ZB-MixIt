@@ -31,7 +31,7 @@ jobs:
           port: 22
           source: ./build/libs/*.jar
           target: /home/${{ secrets.EC2_USERNAME }}/mixit/mixit.jar
-          zip: false
+          strip_components: 1
 
       # 5) EC2에서 기존 프로세스 종료 & 새 프로세스 실행
       - name: Restart Spring Boot on EC2
@@ -51,5 +51,5 @@ jobs:
               sleep 5
             fi
             echo "Starting application..."
-            java -jar "$APP_JAR" --spring.profiles.active=develop
+            java -jar "$APP_JAR" --spring.profiles.active=develop &
             echo "Application started."
