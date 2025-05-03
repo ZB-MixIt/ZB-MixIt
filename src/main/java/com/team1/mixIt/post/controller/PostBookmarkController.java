@@ -80,7 +80,7 @@ public class PostBookmarkController {
          @AuthenticationPrincipal User user,
          @RequestParam(defaultValue = "0") int page,
          @RequestParam(defaultValue = "10") int size,
-         @RequestParam(defaultValue = "latest") String sort   // ← 추가
+         @RequestParam(defaultValue = "latest") String sort
  ) {
   Sort sortOption;
   switch (sort.toLowerCase()) {

@@ -1,4 +1,3 @@
-// src/main/java/com/team1/mixIt/post/dto/response/PostResponse.java
 package com.team1.mixIt.post.dto.response;
 
 import com.team1.mixIt.post.entity.Post;

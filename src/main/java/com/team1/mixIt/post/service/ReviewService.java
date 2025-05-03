@@ -1,4 +1,3 @@
-// src/main/java/com/team1/mixIt/post/service/ReviewService.java
 package com.team1.mixIt.post.service;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;

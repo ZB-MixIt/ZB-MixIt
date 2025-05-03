@@ -1,4 +1,3 @@
-// src/main/java/com/team1/mixIt/tag/controller/TagAutoCompleteController.java
 package com.team1.mixIt.tag.controller;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
