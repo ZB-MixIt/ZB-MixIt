@@ -44,7 +44,7 @@ public class UserAccountService {
         userRepository.findByEmail(dto.getEmail()).ifPresent(v -> {throw new DuplicateEmailException(dto.getEmail());});
         userRepository.findByNickname(dto.getNickname()).ifPresent(v -> {throw new DuplicateNicknameException(dto.getNickname());});
 
-//        emailService.checkIsEmailVerified(dto.getEmail());
+        emailService.checkIsEmailVerified(dto.getEmail());
         userTermsService.checkRequiredTerms(dto.getTerms());
 
         User user = User.builder()

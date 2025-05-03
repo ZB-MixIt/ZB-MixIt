@@ -43,6 +43,9 @@ jobs:
           port: 22
           script: |
             APP_DIR="/home/${{ secrets.EC2_USERNAME }}/mixit"
+            echo ">>> Move to app directory: $APP_DIR"
+            cd "$APP_DIR" || { echo "디렉터리 이동 실패"; exit 1; }
+            
             # mixit 폴더에 있는 첫 번째 JAR 파일 경로 탐색
             JAR_FILE=$(ls "$APP_DIR"/*.jar | head -n1)
 
@@ -61,4 +64,5 @@ jobs:
 
             # 백그라운드로 실행
             echo "Starting application..."
-            java -jar "$JAR_FILE" --spring.profiles.active=develop &
+            java -jar "$JAR_FILE" --spring.profiles.active=dev \
+              --spring.config.location=classpath:/,file:./custom-config/ &
