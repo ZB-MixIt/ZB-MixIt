@@ -1,5 +1,6 @@
 package com.team1.mixIt.common.exception;
 
+import com.team1.mixIt.common.code.ResponseCode;
 import com.team1.mixIt.common.dto.ResponseTemplate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.Ordered;
@@ -23,12 +24,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ValidationExceptionHandler {
 
-    private final ResponseCodeResolver responseCodeResolver;
-
     @ResponseStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseTemplate<Map<String, List<MediaType>>> handleHttpMediaTypeNotSupportedException(HttpMediaTypeNotSupportedException ex) {
-        return ResponseTemplate.of(responseCodeResolver.resolve(ex), Map.of("supportedMediaTypes", ex.getSupportedMediaTypes()));
+        return ResponseTemplate.of(ResponseCode.INVALID_REQUEST, Map.of("supportedMediaTypes", ex.getSupportedMediaTypes()));
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -40,7 +39,7 @@ public class ValidationExceptionHandler {
             String msg = error.getDefaultMessage();
             errors.put(fieldName, msg);
         });
-        return ResponseTemplate.of(responseCodeResolver.resolve(ex), errors);
+        return ResponseTemplate.of(ResponseCode.INVALID_REQUEST, errors);
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -48,6 +47,6 @@ public class ValidationExceptionHandler {
     public ResponseTemplate<Map<String, String>> handleMissingServletExceptions(MissingServletRequestParameterException ex) {
         Map<String, String> errors = new HashMap<>();
         errors.put(ex.getParameterName(), String.format("%s type parameter required.", ex.getParameterType()));
-        return ResponseTemplate.of(responseCodeResolver.resolve(ex), errors);
+        return ResponseTemplate.of(ResponseCode.INVALID_REQUEST, errors);
     }
 }

@@ -1,9 +1,8 @@
 package com.team1.mixIt.email.service;
 
+import com.team1.mixIt.common.code.ResponseCode;
 import com.team1.mixIt.common.config.CacheConfig;
-import com.team1.mixIt.email.exception.EmailNotVerifiedException;
-import com.team1.mixIt.email.exception.EmailVerificationCodeNotMatch;
-import com.team1.mixIt.email.exception.EmailVerificationHistoryNotFound;
+import com.team1.mixIt.common.exception.ClientException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -50,8 +49,8 @@ public class EmailService {
     public void verifyEmail(String email, String code) {
         EmailVerificationData data = getVerifyEmailData(email);
 
-        if (Objects.isNull(data)) throw new EmailVerificationHistoryNotFound();
-        if (!data.getCode().equals(code)) throw new EmailVerificationCodeNotMatch();
+        if (Objects.isNull(data)) throw new ClientException(ResponseCode.EMAIL_VERIFICATION_HISTORY_NOT_FOUND);;
+        if (!data.getCode().equals(code)) throw new ClientException(ResponseCode.EMAIL_VERIFICATION_CODE_NOT_MATCHED);
 
         data.setVerified(true);
         emailCache.put(email, data);
@@ -59,7 +58,7 @@ public class EmailService {
 
     public void checkIsEmailVerified(String email) {
         EmailVerificationData data = getVerifyEmailData(email);
-        if (data == null || !data.isVerified()) throw new EmailNotVerifiedException();
+        if (data == null || !data.isVerified()) throw new ClientException(ResponseCode.EMAIL_NOT_VERIFIED);;
     }
 
     public void deleteVerifiedHistory(String email) {

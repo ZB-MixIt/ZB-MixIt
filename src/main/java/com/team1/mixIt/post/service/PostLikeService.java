@@ -2,6 +2,8 @@ package com.team1.mixIt.post.service;
 
 import com.team1.mixIt.actionlog.entity.ActionLog;
 import com.team1.mixIt.actionlog.repository.ActionLogRepository;
+import com.team1.mixIt.common.code.ResponseCode;
+import com.team1.mixIt.common.exception.ClientException;
 import com.team1.mixIt.post.dto.response.LikeResponse;
 import com.team1.mixIt.post.entity.PostLike;
 import com.team1.mixIt.post.repository.PostLikeRepository;
@@ -21,7 +23,7 @@ public class PostLikeService {
     @Transactional
     public LikeResponse addLike(Long postId, Long userId) {
         if (!postRepository.existsById(postId)) {
-            throw new RuntimeException("존재하지 않는 게시물입니다.");
+            throw new ClientException(ResponseCode.POST_NOT_FOUND);
         }
 
         boolean hasLiked = postLikeRepository.findByPostIdAndUserId(postId, userId).isEmpty();
@@ -59,7 +61,7 @@ public class PostLikeService {
 
     public LikeResponse status(Long postId, Long userId) {
         if (!postRepository.existsById(postId)) {
-            throw new RuntimeException("존재하지 않는 게시물입니다.");
+            throw new ClientException(ResponseCode.POST_NOT_FOUND);
         }
         boolean hasLiked = postLikeRepository.findByPostIdAndUserId(postId, userId).isPresent();
         long count = postLikeRepository.countByPostId(postId);

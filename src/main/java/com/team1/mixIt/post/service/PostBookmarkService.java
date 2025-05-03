@@ -2,7 +2,8 @@ package com.team1.mixIt.post.service;
 
 import com.team1.mixIt.actionlog.entity.ActionLog;
 import com.team1.mixIt.actionlog.repository.ActionLogRepository;
-import com.team1.mixIt.common.dto.ResponseTemplate;
+import com.team1.mixIt.common.code.ResponseCode;
+import com.team1.mixIt.common.exception.ClientException;
 import com.team1.mixIt.post.dto.response.BookmarkResponse;
 import com.team1.mixIt.post.dto.response.BookmarkResponsePage;
 import com.team1.mixIt.post.entity.UserBookmark;
@@ -11,13 +12,11 @@ import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.post.repository.UserBookmarkRepository;
 import com.team1.mixIt.user.entity.User;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -29,8 +28,7 @@ public class PostBookmarkService {
     @Transactional
     public void addBookmark(Long postId, User user) {
         if (!postRepository.existsById(postId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "게시물 " + postId + "을(를) 찾을 수 없습니다.");
+            throw new ClientException(ResponseCode.POST_NOT_FOUND);
         }
 
         UserBookmarkId key = new UserBookmarkId(user.getId(), postId);

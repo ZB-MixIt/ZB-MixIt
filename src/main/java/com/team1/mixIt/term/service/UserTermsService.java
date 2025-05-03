@@ -1,8 +1,9 @@
 package com.team1.mixIt.term.service;
 
+import com.team1.mixIt.common.code.ResponseCode;
+import com.team1.mixIt.common.exception.ClientException;
 import com.team1.mixIt.term.entity.Terms;
 import com.team1.mixIt.term.entity.UserTerms;
-import com.team1.mixIt.term.exception.RequiredTermsNotProvidedException;
 import com.team1.mixIt.term.repository.TermsRepository;
 import com.team1.mixIt.term.repository.UserTermsRepository;
 import com.team1.mixIt.user.entity.User;
@@ -26,7 +27,7 @@ public class UserTermsService {
 
         Set<Integer> termsSet = new HashSet<>(termsIds);
 
-        if (!termsSet.containsAll(requiredTerms.stream().map(Terms::getId).toList())) throw new RequiredTermsNotProvidedException();
+        if (!termsSet.containsAll(requiredTerms.stream().map(Terms::getId).toList())) throw new ClientException(ResponseCode.REQUIRED_TERMS_NOT_PROVIDED);
     }
 
     public List<Terms> getAgreedTerms(User user) {
@@ -35,7 +36,7 @@ public class UserTermsService {
 
     public void agreeTerms(List<Integer> termsIds, User user) {
         List<Terms> foundTerms = termsRepository.findByIdIn(termsIds);
-        if (termsIds.size() != foundTerms.size()) throw new RuntimeException();
+        if (termsIds.size() != foundTerms.size()) throw new ClientException(ResponseCode.TERMS_NOT_FOUND);;
 
         List<UserTerms> existing = userTermsRepository.findByUserAndTermsIdIn(user, termsIds);
 
@@ -56,7 +57,7 @@ public class UserTermsService {
 
     public void disagreeTerms(List<Integer> termsIds, User user) {
         List<Terms> foundTerms = termsRepository.findByIdIn(termsIds);
-        if (termsIds.size() != foundTerms.size()) throw new RuntimeException();
+        if (termsIds.size() != foundTerms.size()) throw new ClientException(ResponseCode.TERMS_NOT_FOUND);
 
         List<UserTerms> userTerms = userTermsRepository.findByUserAndTermsIdIn(user, termsIds);
         userTermsRepository.deleteAll(userTerms);
