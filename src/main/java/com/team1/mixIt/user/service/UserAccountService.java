@@ -11,6 +11,7 @@ import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.exception.*;
 import com.team1.mixIt.user.repository.UserRepository;
 import com.team1.mixIt.utils.DateUtils;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,12 +38,13 @@ public class UserAccountService {
         return userRepository.findByNameAndEmailAndBirthdate(name, email, convertToLocalDate(birth));
     }
 
+    @Transactional
     public User createUser(UserCreateDto dto) {
         userRepository.findByLoginId(dto.getLoginId()).ifPresent(v -> {throw new DuplicateLoginIdException(dto.getLoginId());});
         userRepository.findByEmail(dto.getEmail()).ifPresent(v -> {throw new DuplicateEmailException(dto.getEmail());});
         userRepository.findByNickname(dto.getNickname()).ifPresent(v -> {throw new DuplicateNicknameException(dto.getNickname());});
 
-        emailService.checkIsEmailVerified(dto.getEmail());
+//        emailService.checkIsEmailVerified(dto.getEmail());
         userTermsService.checkRequiredTerms(dto.getTerms());
 
         User user = User.builder()
@@ -51,7 +53,7 @@ public class UserAccountService {
                 .name(dto.getName())
                 .birthdate(convertToLocalDate(dto.getBirth()))
                 .email(dto.getEmail())
-                .nickname(dto.getEmail())
+                .nickname(dto.getNickname())
                 .build();
 
         if (Objects.nonNull(dto.getImageId())) {

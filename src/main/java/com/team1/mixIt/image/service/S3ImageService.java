@@ -7,9 +7,8 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.util.IOUtils;
 import com.team1.mixIt.image.entity.Image;
+import com.team1.mixIt.image.exception.ImageNotFoundException;
 import com.team1.mixIt.image.repository.ImageRepository;
-import com.team1.mixIt.post.entity.Post;
-import com.team1.mixIt.post.entity.Review;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -164,7 +163,9 @@ public class S3ImageService implements ImageService {
 
     @Override
     public List<Image> findAllById(List<Long> ids) {
-        return imageRepository.findAllById(ids);
+        List<Image> images = imageRepository.findAllById(ids);
+        if (images.size() != ids.size()) throw new ImageNotFoundException();
+        return images;
     }
 
     @Override
