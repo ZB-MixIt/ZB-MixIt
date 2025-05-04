@@ -17,16 +17,11 @@ public enum Category {
 
     @JsonValue
     public String toJson() {
-        return label;
+        return name();
     }
 
     @JsonCreator
-    public static Category fromJson(String label) {
-        for (Category c : values()) {
-            if (c.label.equals(label)) {
-                return c;
-            }
-        }
-        throw new IllegalArgumentException("알 수 없는 카테고리: " + label);
+    public static Category fromJson(String json) {
+        return Category.valueOf(json);
     }
 }
