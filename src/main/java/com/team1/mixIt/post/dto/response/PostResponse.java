@@ -1,6 +1,7 @@
 package com.team1.mixIt.post.dto.response;
 
 import com.team1.mixIt.post.entity.Post;
+import com.team1.mixIt.post.entity.PostHashtag;
 import com.team1.mixIt.post.enums.Category;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -44,6 +45,7 @@ public class PostResponse {
 
     @Schema(description = "북마크 수", example = "0")
     private Integer bookmarkCount;
+    private List<String> tags;
 
     public static PostResponse fromEntity(Post p) {
         return PostResponse.builder()
@@ -57,6 +59,11 @@ public class PostResponse {
                 .bookmarkCount(p.getBookmarkCount())
                 .hasLiked(false)
                 .likeCount(0L)
+                .tags(
+                        p.getHashtag().stream()
+                                .map(PostHashtag::getHashtag)
+                                .toList()
+                )
                 .build();
     }
 }
