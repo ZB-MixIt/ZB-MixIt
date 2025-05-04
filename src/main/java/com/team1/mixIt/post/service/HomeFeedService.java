@@ -1,53 +1,123 @@
 package com.team1.mixIt.post.service;
 
-import com.team1.mixIt.actionlog.repository.ActionLogRepository;
+import com.team1.mixIt.post.dto.response.HomeFeedResponse;
 import com.team1.mixIt.post.dto.response.PostResponse;
+import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.repository.PostRepository;
+import com.team1.mixIt.tag.dto.response.TagStatResponse;
+import com.team1.mixIt.tag.service.TagStatsService;
+import com.team1.mixIt.actionlog.repository.ActionLogRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class HomeFeedService {
+
     private final PostRepository postRepository;
     private final ActionLogRepository actionLogRepository;
+    private final TagStatsService tagStatsService;
 
-    // 홈: 카테고리별 최신 n개
+    //  카테고리별 페이징 조회 (최근 24시간)
     @Transactional(readOnly = true)
-    public List<PostResponse> getHomeByCategory(String category, int n) {
-        return postRepository.findAll(
-                        (root, query, cb) -> cb.equal(root.get("category"), category),
-                        PageRequest.of(0, n, Sort.by("createdAt").descending())
-                ).stream()
-                .map(PostResponse::fromEntity)
-                .toList();
+    public Page<PostResponse> getHomeByCategory(String category, int page, int size) {
+        LocalDateTime since = LocalDateTime.now().minusHours(24);
+        Pageable pg = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        Page<Post> posts = postRepository.findAll(
+                (root, query, cb) -> cb.and(
+                        cb.equal(root.get("category"), category),
+                        cb.greaterThanOrEqualTo(root.get("createdAt"), since)
+                ),
+                pg
+        );
+
+        return posts.map(p ->
+                // TODO: currentUserId, defaultImageUrl 값 실제로 채워 넣을 것
+                PostResponse.fromEntity(p, /*currentUserId=*/null, /*defaultImgUrl=*/null)
+        );
     }
 
-    // 홈: 오늘의 인기 조회수 Top 페이징 = 지금 인기있는 조합
+    // 당일 조회수 Top N (페이징)
     @Transactional(readOnly = true)
     public Page<PostResponse> getTodayTopViewed(int page, int size) {
         LocalDate today = LocalDate.now();
-        Page<Long> ids = actionLogRepository.findTopViewedPostIds(today, PageRequest.of(page, size));
-        return ids.map(id -> PostResponse.fromEntity(
-                postRepository.findById(id).orElseThrow()
-        ));
+        Page<Long> ids = actionLogRepository.findTopViewedPostIds(
+                today,
+                PageRequest.of(page, size, Sort.unsorted())
+        );
+
+        return ids.map(id -> {
+            Post p = postRepository.findById(id).orElseThrow();
+            return PostResponse.fromEntity(p, null, null);
+        });
     }
 
-    // 홈: 오늘의 추천 북마크 Top 페이징 = 오늘의 추천 게시물
+    // 주간 조회수 Top N (페이징)
+    @Transactional(readOnly = true)
+    public Page<PostResponse> getWeeklyTopViewed(int page, int size) {
+        LocalDateTime now     = LocalDateTime.now();
+        LocalDateTime weekAgo = now.minusDays(7);
+
+        Page<Object[]> raw = actionLogRepository.findWeeklyViews(
+                weekAgo,
+                now,
+                PageRequest.of(page, size)
+        );
+
+        List<PostResponse> list = raw.getContent().stream()
+                .map(arr -> {
+                    Long id = (Long) arr[0];
+                    Post p = postRepository.findById(id).orElseThrow();
+                    return PostResponse.fromEntity(p, null, null);
+                })
+                .toList();
+
+        return new PageImpl<>(list, raw.getPageable(), raw.getTotalElements());
+    }
+
+    // 당일 북마크 Top N (페이징)
     @Transactional(readOnly = true)
     public Page<PostResponse> getTodayTopBookmarked(int page, int size) {
         LocalDate today = LocalDate.now();
-        Page<Long> ids = actionLogRepository.findTopBookmarkedPostIds(today, PageRequest.of(page, size));
-        return ids.map(id -> PostResponse.fromEntity(
-                postRepository.findById(id).orElseThrow()
-        ));
+        Page<Long> ids = actionLogRepository.findTopBookmarkedPostIds(
+                today,
+                PageRequest.of(page, size, Sort.unsorted())
+        );
+
+        return ids.map(id -> {
+            Post p = postRepository.findById(id).orElseThrow();
+            return PostResponse.fromEntity(p, null, null);
+        });
+    }
+
+   // 주간 북마크 TOP N
+    @Transactional(readOnly = true)
+    public Page<PostResponse> getWeeklyTopBookmarked(int page, int size) {
+        LocalDateTime now     = LocalDateTime.now();
+        LocalDateTime weekAgo = now.minusDays(7);
+
+        Page<Long> ids = actionLogRepository.findWeeklyBookmarkedPostIds(
+                weekAgo, now, PageRequest.of(page, size, Sort.unsorted())
+        );
+
+        return ids.map(id -> {
+            Post p = postRepository.findById(id).orElseThrow();
+            return PostResponse.fromEntity(p, null, null);
+        });
+    }
+
+    // 추천 탭: 당일 북마크된 게시물 + 인기 태그 10개
+    @Transactional(readOnly = true)
+    public HomeFeedResponse getTodayRecommendations(int page, int size) {
+        Page<PostResponse> posts = getTodayTopBookmarked(page, size);
+        List<TagStatResponse> tags = tagStatsService.getTopTags(10);
+        return new HomeFeedResponse(posts, tags);
     }
 }

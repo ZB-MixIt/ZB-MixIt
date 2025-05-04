@@ -16,6 +16,7 @@ import java.util.Objects;
 
 @Entity
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -46,6 +47,16 @@ public class User extends BaseEntity implements UserDetails  {
     private String socialUserId;
 
     private String socialLink;
+
+    // 알림 수신 여부: 기본값 on
+    @Column(name = "notify_on", nullable = false)
+    @Builder.Default
+    private boolean notifyOn = true;
+
+    // 푸시 알림 수신 여부
+    @Column(name = "push_on", nullable = false)
+    @Builder.Default
+    private boolean pushOn = true;
 
     private LocalDateTime createdAt;
 

@@ -3,6 +3,7 @@ package com.team1.mixIt.post.service;
 import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.image.service.ImageService;
+import com.team1.mixIt.notification.event.NotificationEvent;
 import com.team1.mixIt.post.dto.request.ReviewRequest;
 import com.team1.mixIt.post.dto.response.ReviewResponse;
 import com.team1.mixIt.post.entity.Post;
@@ -12,6 +13,7 @@ import com.team1.mixIt.post.repository.ReviewRepository;
 import com.team1.mixIt.user.entity.User;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
@@ -26,10 +28,9 @@ public class ReviewService {
     private final ReviewRepository reviewRepo;
     private final PostRepository postRepo;
     private final ImageService imageService;
+    private final ApplicationEventPublisher eventPublisher;
 
-    /**
-     * 리뷰 등록
-     */
+
     @Transactional
     public ReviewResponse addReview(Long postId, User user, ReviewRequest req) {
         Post post = postRepo.findById(postId)
@@ -51,7 +52,17 @@ public class ReviewService {
             imageService.setOwner(images, user);
         }
         recalcAverageRating(post);
-        return ReviewResponse.fromEntity(review);
+        Long receiverId = post.getUserId();
+        if (!receiverId.equals(user.getId())) {
+            eventPublisher.publishEvent(new NotificationEvent(
+                    this,
+                    receiverId,
+                    "POST_COMMENT",
+                    postId,
+                    String.format("%s님이 내 게시물에 댓글을 남겼습니다.", user.getNickname())
+            ));
+        }
+        return ReviewResponse.fromEntity(review, user.getId());
     }
 
     @Transactional
@@ -74,7 +85,7 @@ public class ReviewService {
         imageService.setOwner(toOwn, user);
 
         recalcAverageRating(review.getPost());
-        return ReviewResponse.fromEntity(review);
+        return ReviewResponse.fromEntity(review, user.getId());
     }
 
     @Transactional
@@ -90,10 +101,10 @@ public class ReviewService {
     }
 
     @Transactional(Transactional.TxType.SUPPORTS)
-    public List<ReviewResponse> listReviews(Long postId) {
+    public List<ReviewResponse> listReviews(Long postId, Long currentUserId) {
         return reviewRepo.findByPostIdOrderByRateDescCreatedAtDesc(postId)
                 .stream()
-                .map(ReviewResponse::fromEntity)
+                .map(r -> ReviewResponse.fromEntity(r, currentUserId))
                 .toList();
     }
 

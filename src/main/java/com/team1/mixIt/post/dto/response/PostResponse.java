@@ -10,12 +10,9 @@ import lombok.Setter;
 
 import java.util.List;
 
-@Getter
-@Setter
-@Builder
+@Getter @Setter @Builder
 @Schema(description = "게시판 응답 DTO")
 public class PostResponse {
-
     @Schema(description = "게시물 고유 ID", example = "1")
     private Long id;
 
@@ -45,9 +42,18 @@ public class PostResponse {
 
     @Schema(description = "북마크 수", example = "0")
     private Integer bookmarkCount;
+
+    @Schema(description = "게시물 태그 목록")
     private List<String> tags;
 
-    public static PostResponse fromEntity(Post p) {
+    @Schema(description = "대표 이미지 URL (없으면 기본 이미지)", example = "https://../기본이미지.png")
+    private String defaultImageUrl;
+
+    @Schema(description = "현재 사용자가 작성자인지 여부", example = "true")
+    private Boolean isAuthor;
+
+    public static PostResponse fromEntity(Post p, Long currentUserId, String defaultImgUrl) {
+        boolean authorFlag = currentUserId != null && p.getUserId().equals(currentUserId);
         return PostResponse.builder()
                 .id(p.getId())
                 .userId(p.getUserId())
@@ -59,11 +65,9 @@ public class PostResponse {
                 .bookmarkCount(p.getBookmarkCount())
                 .hasLiked(false)
                 .likeCount(0L)
-                .tags(
-                        p.getHashtag().stream()
-                                .map(PostHashtag::getHashtag)
-                                .toList()
-                )
+                .tags(p.getHashtag().stream().map(PostHashtag::getHashtag).toList())
+                .defaultImageUrl(p.getImageIds().isEmpty() ? defaultImgUrl : null)
+                .isAuthor(authorFlag)
                 .build();
     }
 }

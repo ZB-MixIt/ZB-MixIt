@@ -3,20 +3,24 @@ package com.team1.mixIt.post.controller;
 import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.post.dto.request.ReviewRequest;
 import com.team1.mixIt.post.dto.response.ReviewResponse;
+import com.team1.mixIt.post.exception.BadRequestException;
 import com.team1.mixIt.post.service.ReviewService;
 import com.team1.mixIt.user.entity.User;
+import com.team1.mixIt.image.service.ImageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/v1/posts/{postId}/reviews")
@@ -25,6 +29,32 @@ import java.util.List;
 public class ReviewController {
 
     private final ReviewService svc;
+    private final ImageService imageService;
+
+    private List<Long> uploadAndGetIds(List<MultipartFile> files, User user) {
+        if (files == null) {
+            return List.of();
+        }
+        if (files.size() > 10) {
+            throw new BadRequestException("최대 10장까지 업로드 가능합니다.");
+        }
+        return files.stream().map(file -> {
+            if (file.getSize() > 10 * 1024 * 1024) {
+                throw new BadRequestException("이미지 파일은 10MB 이하만 가능합니다.");
+            }
+            String ext = Objects.requireNonNull(file.getOriginalFilename())
+                    .substring(file.getOriginalFilename().lastIndexOf('.') + 1)
+                    .toLowerCase();
+            if (!List.of("jpg", "jpeg", "png").contains(ext)) {
+                throw new BadRequestException("Jpg/Png만 지원합니다.");
+            }
+            if (user != null && user.getLoginId() != null) {
+                return imageService.create(file, user.getLoginId()).getId();
+            } else {
+                return imageService.create(file).getId();
+            }
+        }).toList();
+    }
 
     @Operation(summary = "리뷰 등록", description = "게시물에 리뷰와 평점을 추가합니다.")
     @ApiResponses({
@@ -34,14 +64,16 @@ public class ReviewController {
             @ApiResponse(responseCode = "401", description = "인증 필요"),
             @ApiResponse(responseCode = "500", description = "서버 에러")
     })
-
     @Validated
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseTemplate<ReviewResponse> create(
             @PathVariable Long postId,
             @AuthenticationPrincipal User user,
-            @Valid @RequestBody ReviewRequest req
+            @Valid @RequestPart("dto") ReviewRequest req,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) {
+        List<Long> imgIds = uploadAndGetIds(images, user);
+        req.setImageIds(imgIds);
         return ResponseTemplate.ok(svc.addReview(postId, user, req));
     }
 
@@ -53,14 +85,19 @@ public class ReviewController {
             @ApiResponse(responseCode = "401", description = "인증 필요"),
             @ApiResponse(responseCode = "500", description = "서버 에러")
     })
-    @Validated
-    @PutMapping("/{reviewId}")
+    @PutMapping(
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            path = "/{reviewId}"
+    )
     public ResponseTemplate<ReviewResponse> update(
             @PathVariable Long postId,
             @PathVariable Long reviewId,
             @AuthenticationPrincipal User user,
-            @Valid @RequestBody ReviewRequest req
+            @Valid @RequestPart("dto") ReviewRequest req,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) {
+        List<Long> imgIds = uploadAndGetIds(images, user);
+        req.setImageIds(imgIds);
         return ResponseTemplate.ok(svc.updateReview(reviewId, user, req));
     }
 
@@ -89,8 +126,10 @@ public class ReviewController {
     })
     @GetMapping
     public ResponseTemplate<List<ReviewResponse>> list(
-            @PathVariable Long postId
+            @PathVariable Long postId,
+            @AuthenticationPrincipal User user
     ) {
-        return ResponseTemplate.ok(svc.listReviews(postId));
+        List<ReviewResponse> reviews = svc.listReviews(postId, user.getId());
+        return ResponseTemplate.ok(reviews);
     }
 }

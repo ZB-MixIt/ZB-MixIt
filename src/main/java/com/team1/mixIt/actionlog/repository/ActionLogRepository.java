@@ -3,64 +3,68 @@ package com.team1.mixIt.actionlog.repository;
 import com.team1.mixIt.actionlog.entity.ActionLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
-
 public interface ActionLogRepository extends JpaRepository<ActionLog, Long> {
 
+    // 오늘 조회수 로그를 집계해 조회수 순으로 포스트 ID 반환
     @Query("""
       SELECT a.postId
         FROM ActionLog a
        WHERE a.actionType = 'VIEW'
          AND a.actionTime >= :todayStart
        GROUP BY a.postId
-       ORDER BY COUNT(a.id) DESC
+       ORDER BY COUNT(a.id) DESC, MAX(a.actionTime) DESC
     """)
     Page<Long> findTopViewedPostIds(
             @Param("todayStart") LocalDate todayStart,
             Pageable pageable
     );
 
+    // 오늘 북마크 로그를 집계해 북마크 순으로 포스트 ID 반환
     @Query("""
       SELECT a.postId
         FROM ActionLog a
        WHERE a.actionType = 'BOOKMARK'
          AND a.actionTime >= :todayStart
        GROUP BY a.postId
-       ORDER BY COUNT(a.id) DESC
+       ORDER BY COUNT(a.id) DESC, MAX(a.actionTime) DESC
     """)
     Page<Long> findTopBookmarkedPostIds(
             @Param("todayStart") LocalDate todayStart,
             Pageable pageable
     );
 
+    // 주간 북마크 TOP
     @Query("""
-      SELECT a.postId
-        FROM ActionLog a
-       WHERE a.actionType = 'LIKE'
-         AND a.actionTime >= :todayStart
-       GROUP BY a.postId
-       ORDER BY COUNT(a.id) DESC
+        SELECT al.postId
+          FROM ActionLog al
+         WHERE al.actionType = 'BOOKMARK'
+           AND al.actionTime BETWEEN :start AND :end
+         GROUP BY al.postId
+         ORDER BY COUNT(al) DESC
     """)
-    Page<Long> findTopLikedPostIds(
-            @Param("todayStart") LocalDate todayStart,
+    Page<Long> findWeeklyBookmarkedPostIds(
+            @Param("start") LocalDateTime start,
+            @Param("end")   LocalDateTime end,
             Pageable pageable
     );
 
+    // 지정 기간동안 VIEW 로그를 집계해 튜플 반환
     @Query("""
-      SELECT a.postId, COUNT(a.id)
+      SELECT a.postId AS postId, COUNT(a.id) AS cnt
         FROM ActionLog a
        WHERE a.actionType = 'VIEW'
          AND a.actionTime BETWEEN :from AND :to
        GROUP BY a.postId
+       ORDER BY cnt DESC
     """)
-    List<Object[]> countViewsByPostBetween(
+    Page<Object[]> findWeeklyViews(
             @Param("from") LocalDateTime from,
-            @Param("to")   LocalDateTime to
+            @Param("to")   LocalDateTime to,
+            Pageable pageable
     );
 }

@@ -33,6 +33,8 @@ import static java.util.Objects.nonNull;
 @RequiredArgsConstructor
 public class PostService {
 
+    private static final String DEFAULT_IMAGE_URL = ""; // TODO: 기본이미주소..
+
     private final UserRepository userRepository;
     private final PostRepository postRepository;
     private final PostHashtagRepository hashtagRepository;
@@ -41,24 +43,21 @@ public class PostService {
     private final ActionLogRepository actionLogRepository;
 
     @Transactional
-    public Long createPost(Long userId, PostCreateRequest request) {
-        Category cat = request.getCategory();
-
-        List<Long> newImageIds = nonNull(request.getImageIds())
-                ? request.getImageIds()
-                : List.of();
+    public Long createPost(Long userId, PostCreateRequest req) {
+        Category cat = req.getCategory();
+        List<Long> imageIds = nonNull(req.getImageIds()) ? req.getImageIds() : List.of();
 
         Post post = Post.builder()
                 .userId(userId)
                 .category(cat)
-                .title(request.getTitle())
-                .content(request.getContent())
-                .imageIds(newImageIds)
+                .title(req.getTitle())
+                .content(req.getContent())
+                .imageIds(imageIds)
                 .build();
         post = postRepository.save(post);
 
-        // 태그 매핑
-        for (String tag : request.getTags()) {
+        // 해시태그 저장
+        for (String tag : req.getTags()) {
             PostHashtag ph = PostHashtag.builder()
                     .post(post)
                     .hashtag(tag)
@@ -68,12 +67,11 @@ public class PostService {
         }
 
         // 이미지 소유권 할당
-        if (!newImageIds.isEmpty()) {
-            List<Image> images = imageService.findAllById(newImageIds);
-            User userProxy = userRepository.getReferenceById(userId);
-            imageService.setOwner(images, userProxy);
+        if (!imageIds.isEmpty()) {
+            List<Image> imgs = imageService.findAllById(imageIds);
+            User u = userRepository.getReferenceById(userId);
+            imageService.setOwner(imgs, u);
         }
-
         return post.getId();
     }
 
@@ -87,17 +85,17 @@ public class PostService {
                 .build()
         );
 
-        Post post = postRepository.findById(postId)
+        Post p = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("게시물이 없습니다."));
 
         boolean hasLiked = postLikeRepository
                 .findByPostIdAndUserId(postId, currentUserId)
                 .isPresent();
-        long likeCount = postLikeRepository.countByPostId(postId);
+        long likeCnt = postLikeRepository.countByPostId(postId);
 
-        PostResponse dto = PostResponse.fromEntity(post);
+        PostResponse dto = PostResponse.fromEntity(p, currentUserId, DEFAULT_IMAGE_URL);
         dto.setHasLiked(hasLiked);
-        dto.setLikeCount(likeCount);
+        dto.setLikeCount(likeCnt);
         return dto;
     }
 
@@ -111,95 +109,84 @@ public class PostService {
             int page,
             int size
     ) {
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
-        Pageable pageable = PageRequest.of(page, size, sort);
+        Pageable pg = PageRequest.of(page, size,
+                Sort.by(Sort.Direction.fromString(sortDir), sortBy));
 
-        Page<Post> postPage = postRepository.findAll((root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-
-            // 카테고리 필터
+        Page<Post> posts = postRepository.findAll((root, query, cb) -> {
+            List<Predicate> preds = new ArrayList<>();
             if (category != null) {
-                predicates.add(cb.equal(root.get("category"), category));
+                preds.add(cb.equal(root.get("category"), category));
             }
-
-            // 키워드 검색 -> 수정 제목 또는 태그
             if (keyword != null) {
                 String like = "%" + keyword + "%";
-                Predicate titleMatch = cb.like(root.get("title"), like);
-
-                Join<Post, PostHashtag> tagJoin = root.join("hashtag", JoinType.LEFT);
-                Predicate tagMatch = cb.like(tagJoin.get("hashtag"), like);
-
-                predicates.add(cb.or(titleMatch, tagMatch));
+                Predicate t1 = cb.like(root.get("title"), like);
+                Join<Post, PostHashtag> jh = root.join("hashtag", JoinType.LEFT);
+                Predicate t2 = cb.like(jh.get("hashtag"), like);
+                preds.add(cb.or(t1, t2));
                 query.distinct(true);
             }
+            return cb.and(preds.toArray(new Predicate[0]));
+        }, pg);
 
-            Predicate[] arr = predicates.toArray(new Predicate[0]);
-            return cb.and(arr);
-        }, pageable);
-
-        return postPage.stream()
-                .map(post -> {
-                    PostResponse dto = PostResponse.fromEntity(post);
-                    boolean hasLiked = postLikeRepository
-                            .findByPostIdAndUserId(post.getId(), currentUserId)
+        return posts.stream()
+                .map(p -> {
+                    boolean liked = postLikeRepository
+                            .findByPostIdAndUserId(p.getId(), currentUserId)
                             .isPresent();
-                    long likeCount = postLikeRepository.countByPostId(post.getId());
-                    dto.setHasLiked(hasLiked);
-                    dto.setLikeCount(likeCount);
+                    long cnt = postLikeRepository.countByPostId(p.getId());
+
+                    PostResponse dto = PostResponse.fromEntity(p, currentUserId, DEFAULT_IMAGE_URL);
+                    dto.setHasLiked(liked);
+                    dto.setLikeCount(cnt);
                     return dto;
                 })
                 .toList();
     }
 
     @Transactional
-    public void updatePost(Long userId, Long postId, PostUpdateRequest request) {
-        Post post = postRepository.findById(postId)
+    public void updatePost(Long userId, Long postId, PostUpdateRequest req) {
+        Post p = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("게시물이 없습니다."));
-        if (!post.getUserId().equals(userId)) {
+        if (!p.getUserId().equals(userId)) {
             throw new AccessDeniedException("내 글만 수정할 수 있습니다.");
         }
 
-        Category cat = request.getCategory();
-        post.setCategory(cat);
+        p.setCategory(req.getCategory());
+        p.setTitle(req.getTitle());
+        p.setContent(req.getContent());
 
-        post.setTitle(request.getTitle());
-        post.setContent(request.getContent());
+        List<Long> orig = p.getImageIds();
+        List<Long> updated = nonNull(req.getImageIds()) ? req.getImageIds() : List.of();
+        imageService.updateAssignedImages(orig, updated);
+        p.setImageIds(updated);
 
-        List<Long> original = post.getImageIds();
-        List<Long> newImageIds = nonNull(request.getImageIds()) ? request.getImageIds() : List.of();
-        imageService.updateAssignedImages(original, newImageIds);
-        post.setImageIds(newImageIds);
-
-        // 태그 재설정
-        hashtagRepository.deleteByPost(post);
-        post.getHashtag().clear();
-        if (nonNull(request.getTags())) {
-            for (String tag : request.getTags()) {
+        hashtagRepository.deleteByPost(p);
+        p.getHashtag().clear();
+        if (nonNull(req.getTags())) {
+            for (String tag : req.getTags()) {
                 PostHashtag ph = PostHashtag.builder()
-                        .post(post)
+                        .post(p)
                         .hashtag(tag)
                         .build();
                 hashtagRepository.save(ph);
-                post.getHashtag().add(ph);
+                p.getHashtag().add(ph);
             }
         }
 
-        // 새 이미지 소유권
-        if (!newImageIds.isEmpty()) {
-            List<Image> newImgs = imageService.findAllById(newImageIds);
-            User userProxy = userRepository.getReferenceById(userId);
-            imageService.setOwner(newImgs, userProxy);
+        if (!updated.isEmpty()) {
+            List<Image> imgs = imageService.findAllById(updated);
+            User u = userRepository.getReferenceById(userId);
+            imageService.setOwner(imgs, u);
         }
     }
 
     @Transactional
     public void deletePost(Long userId, Long postId) {
-        Post post = postRepository.findById(postId)
+        Post p = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("게시물이 없습니다."));
-        if (!post.getUserId().equals(userId)) {
+        if (!p.getUserId().equals(userId)) {
             throw new AccessDeniedException("내 글만 삭제할 수 있습니다.");
         }
-        postRepository.delete(post);
+        postRepository.delete(p);
     }
 }

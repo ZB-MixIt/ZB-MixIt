@@ -41,8 +41,15 @@ public class UserMyPageController {
             description = "MyPage 하위 알림 정보 조회 API"
     )
     @GetMapping("/notification")
-    public ResponseTemplate<GetMyPageNotificationResponse> getMyPageNotification() {
-        return null;
+    public ResponseTemplate<GetMyPageNotificationResponse> getMyPageNotification(
+            @AuthenticationPrincipal User user
+    ) {
+        return ResponseTemplate.ok(
+                GetMyPageNotificationResponse.builder()
+                        .eventNotification(user.isNotifyOn())
+                        .pushNotification(user.isNotifyOn())
+                        .build()
+        );
     }
 
     @Operation(
@@ -50,8 +57,16 @@ public class UserMyPageController {
             description = "MyPage 하위 알림 정보 수정 API"
     )
     @PostMapping("/notification")
-    public ResponseTemplate<Void> updateNotification(@Valid @RequestBody UpdateNotificationRequest request) {
-        return null;
+    public ResponseTemplate<Void> updateNotification(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody UpdateNotificationRequest request
+    ) {
+        userService.updateNotificationSettings(
+                user.getId(),
+                request.getEvent(),
+                request.getAlert()
+        );
+        return ResponseTemplate.ok();
     }
 
     @Getter

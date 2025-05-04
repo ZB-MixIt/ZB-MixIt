@@ -11,6 +11,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "post")
+@NamedEntityGraph(name = "Post.withHashtags", attributeNodes = @NamedAttributeNode("hashtag"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Post extends BaseEntity {
     @Id

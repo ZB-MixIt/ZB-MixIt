@@ -92,10 +92,16 @@ public class PostBookmarkController {
     sortOption = Sort.by(Sort.Direction.DESC, "createdAt");
     break;
   }
+
   BookmarkResponsePage dto = bookmarkService.getMyBookmarks(
           user.getId(), page, size, sortOption
   );
+
+  if (dto.getContent().isEmpty()) {
+   dto.setEmptyMessage("더 많은 조합 보러가기");
+  }
+
   return ResponseTemplate.ok(dto);
+
  }
 }
-

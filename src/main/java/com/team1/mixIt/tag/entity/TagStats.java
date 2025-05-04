@@ -22,8 +22,10 @@ public class TagStats {
     private String tag;
 
     @Column(name = "use_count", nullable = false)
+    @Builder.Default
     private Long useCount = 0L;
 
     @Column(name = "updated_at", nullable = false)
+    @Builder.Default
     private LocalDateTime updatedAt = LocalDateTime.now();
 }
