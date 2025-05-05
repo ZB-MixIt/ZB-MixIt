@@ -21,7 +21,7 @@
         </rollingPolicy>
     </appender>
 
-    <springProfile name="develop">
+    <springProfile name="dev">
         <root level="INFO">
             <appender-ref ref="ROLLING_FILE"/>
         </root>
