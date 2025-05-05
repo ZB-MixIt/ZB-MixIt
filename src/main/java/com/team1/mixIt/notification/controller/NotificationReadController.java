@@ -1,3 +1,4 @@
+/*
 package com.team1.mixIt.notification.controller;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
@@ -23,7 +24,8 @@ public class NotificationReadController {
             @AuthenticationPrincipal User user
     ) {
         return ResponseTemplate.ok(
-                notificationService.getUnreadNotifications(user.getId())
+                null
+                notificationService.getUnreadNotifications(user.getId()) // Todo 추후 수정 필요
         );
     }
 
@@ -37,3 +39,4 @@ public class NotificationReadController {
         return ResponseTemplate.ok();
     }
 }
+*/
