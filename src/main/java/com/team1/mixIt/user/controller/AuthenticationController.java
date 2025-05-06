@@ -4,6 +4,7 @@ import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.common.service.AuthenticationService;
 import com.team1.mixIt.common.service.JwtService;
 import com.team1.mixIt.user.entity.User;
+import com.team1.mixIt.utils.DateUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -37,6 +38,9 @@ public class AuthenticationController {
                         .loginId(user.getLoginId())
                         .name(user.getName())
                         .nickname(user.getNickname())
+                        .imageSrc(user.getProfileImage() == null ? null : user.getProfileImage().getUrl())
+                        .email(user.getEmail())
+                        .birth(DateUtils.yyMMdd(user.getBirthdate()))
                         .token(token)
                         .expiresIn(jwtService.getExpirationTime())
                         .build()
@@ -72,6 +76,9 @@ public class AuthenticationController {
     public static class LoginResponse {
         private String loginId;
         private String nickname;
+        private String email;
+        private String imageSrc;
+        private String birth;
         private String name;
         private String token;
         private long expiresIn;
