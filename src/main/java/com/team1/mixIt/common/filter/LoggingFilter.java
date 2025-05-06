@@ -55,7 +55,6 @@ public class LoggingFilter extends OncePerRequestFilter {
 
         // 응답 로그
         wrappedResponse.setHeader("tx-id", txId);
-        wrappedResponse.copyBodyToResponse();
         String responseBody = getPayload(wrappedResponse.getContentAsByteArray());
         log.info("\n[RES]  status={} \nHeaders: {}\nBody: {} ({}ms)",
                 wrappedResponse.getStatus(),
@@ -63,8 +62,7 @@ public class LoggingFilter extends OncePerRequestFilter {
                 responseBody,
                 duration
         );
-
-        // 래핑된 응답을 실제로 전송
+        wrappedResponse.copyBodyToResponse();
     }
 
     private String getPayload(byte[] buf) {
