@@ -52,8 +52,6 @@ public class PostController {
             @AuthenticationPrincipal User user,
             @Valid @RequestBody PostCreateRequest dto
     ) {
-        // 이미지 ID 리스트는 빈 배열로 채워 줍니다
-        dto.setImageIds(Collections.emptyList());
         Long postId = postService.createPost(user.getId(), dto);
         return ResponseTemplate.ok(postId);
     }
