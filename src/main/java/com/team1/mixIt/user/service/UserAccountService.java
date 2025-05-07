@@ -59,7 +59,9 @@ public class UserAccountService {
             Image image = imageRepository.findById(dto.getImageId()).orElseThrow(() -> new ClientException(ResponseCode.IMAGE_NOT_FOUND));
 
             if (Objects.nonNull(image.getUser())) throw new ClientException(ResponseCode.IMAGE_OWNER_ALREADY_EXIST);
+            image.updateUser(user);
             user.updateProfileImage(image);
+            imageRepository.save(image);
         }
 
         user = userRepository.save(user);
