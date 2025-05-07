@@ -13,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-
 @RestController
 @RequestMapping("/api/v1/posts/{postId}/reviews/{reviewId}/like")
 @RequiredArgsConstructor
@@ -21,13 +20,13 @@ import org.springframework.web.server.ResponseStatusException;
 public class ReviewLikeController {
 
     private final ReviewLikeService likeService;
-    private final ReviewService reviewService;
+    private final ReviewService    reviewService;
 
     @Operation(summary = "리뷰 좋아요 등록", description = "리뷰에 좋아요를 등록합니다.")
     @ApiResponse(responseCode = "201", description = "좋아요 등록 성공")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseTemplate<Void> like(
+    public ResponseTemplate<LikeResponse> like(
             @PathVariable Long postId,
             @PathVariable Long reviewId,
             @AuthenticationPrincipal User user
@@ -38,14 +37,15 @@ public class ReviewLikeController {
         if (!reviewService.existsByIdAndPostId(reviewId, postId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "리뷰 없음");
         }
-        likeService.like(reviewId, user.getId());
-        return ResponseTemplate.ok();
+        // 좋아요 추가 후, 최신 상태를 반환
+        LikeResponse resp = likeService.like(reviewId, user.getId());
+        return ResponseTemplate.ok(resp);
     }
 
     @Operation(summary = "리뷰 좋아요 해제", description = "등록된 좋아요를 취소합니다.")
     @ApiResponse(responseCode = "200", description = "좋아요 해제 성공")
     @DeleteMapping
-    public ResponseTemplate<Void> unlike(
+    public ResponseTemplate<LikeResponse> unlike(
             @PathVariable Long postId,
             @PathVariable Long reviewId,
             @AuthenticationPrincipal User user
@@ -56,8 +56,9 @@ public class ReviewLikeController {
         if (!reviewService.existsByIdAndPostId(reviewId, postId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "리뷰 없음");
         }
-        likeService.unlike(reviewId, user.getId());
-        return ResponseTemplate.ok();
+        // 좋아요 해제 후, 최신 상태를 반환
+        LikeResponse resp = likeService.unlike(reviewId, user.getId());
+        return ResponseTemplate.ok(resp);
     }
 
     @Operation(summary = "리뷰 좋아요 상태 조회", description = "현재 사용자의 좋아요 여부와 총 좋아요 수를 반환합니다.")

@@ -12,27 +12,31 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class ReviewLikeService {
-    private final ReviewLikeRepository likeRepository;
-    private final ReviewRepository reviewRepository;
-
+    private final ReviewLikeRepository repo;
 
     @Transactional
-    public void like(Long reviewId, Long userId) {
-        if (likeRepository.existsByReviewIdAndUserId(reviewId, userId)) return;
-        likeRepository.save(new ReviewLike(reviewId, userId));
+    public LikeResponse like(Long reviewId, Long userId) {
+        boolean added = false;
+        if (!repo.existsByReviewIdAndUserId(reviewId, userId)) {
+            repo.save(new ReviewLike(reviewId, userId));
+            added = true;
+        }
+        long count = repo.countByReviewId(reviewId);
+        return new LikeResponse(added, count);
     }
 
     @Transactional
-    public void unlike(Long reviewId, Long userId) {
-        likeRepository.deleteByReviewIdAndUserId(reviewId, userId);
+    public LikeResponse unlike(Long reviewId, Long userId) {
+        if (repo.existsByReviewIdAndUserId(reviewId, userId)) {
+            repo.deleteByReviewIdAndUserId(reviewId, userId);
+        }
+        long count = repo.countByReviewId(reviewId);
+        return new LikeResponse(false, count);
     }
 
-    @Transactional(readOnly = true)
     public LikeResponse status(Long reviewId, Long userId) {
-        boolean hasLiked = likeRepository.existsByReviewIdAndUserId(reviewId, userId);
-        long count = reviewRepository.findById(reviewId)
-                .map(Review::getLikeCount)
-                .orElse(0L);
+        boolean hasLiked = repo.existsByReviewIdAndUserId(reviewId, userId);
+        long count = repo.countByReviewId(reviewId);
         return new LikeResponse(hasLiked, count);
     }
 }
