@@ -1,6 +1,7 @@
 package com.team1.mixIt.post.service;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.team1.mixIt.actionlog.entity.ActionLog;
@@ -24,11 +25,11 @@ public class PostLikeService {
     private final ActionLogRepository actionLogRepository;
     private final ApplicationEventPublisher eventPublisher;
 
+    @PostMapping
     @Transactional
     public LikeResponse addLike(Long postId, Long userId) {
-        if (!postRepository.existsById(postId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시물을 찾을 수 없습니다.");
-        }
+        var post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시물을 찾을 수 없습니다."));
 
         boolean hasLiked = postLikeRepository.findByPostIdAndUserId(postId, userId).isEmpty();
         if (hasLiked) {
@@ -44,10 +45,9 @@ public class PostLikeService {
                     .actionType("LIKE")
                     .build());
 
-            //알림 이벤트 발생
             eventPublisher.publishEvent(new NotificationEvent(
                     this,
-                    postRepository.getReferenceById(postId).getUserId(),
+                    post.getUserId(),
                     "POST_LIKE",
                     postId,
                     "회원님 게시물에 새 좋아요가 달렸습니다."
@@ -57,6 +57,7 @@ public class PostLikeService {
         long count = postLikeRepository.countByPostId(postId);
         return new LikeResponse(hasLiked, count);
     }
+
 
     @Transactional
     public void removeLike(Long postId, Long userId) {
