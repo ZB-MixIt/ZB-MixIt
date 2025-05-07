@@ -2,11 +2,11 @@ package com.team1.mixIt.post.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 @Getter
-@RequiredArgsConstructor
 public enum Category {
     CAFE("카페"),
     RESTAURANT("음식점"),
@@ -14,6 +14,10 @@ public enum Category {
     OTHER("기타");
 
     private final String label;
+
+    Category(String label) {
+        this.label = label;
+    }
 
     @JsonValue
     public String toJson() {

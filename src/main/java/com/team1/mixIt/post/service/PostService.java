@@ -37,7 +37,7 @@ import static java.util.Objects.nonNull;
 @RequiredArgsConstructor
 public class PostService {
 
-    private static final String DEFAULT_IMAGE_URL = ""; // TODO: 기본이미주소..
+    private static final String DEFAULT_IMAGE_URL = "https://mixit-local.s3.ap-northeast-2.amazonaws.com/e94bb2e2-9symbol.png"; // TODO: 기본이미주소..
 
     private final UserRepository userRepository;
     private final PostRepository postRepository;
