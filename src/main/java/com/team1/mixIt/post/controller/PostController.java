@@ -1,14 +1,12 @@
 package com.team1.mixIt.post.controller;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
-import com.team1.mixIt.common.validation.FileType;
-import com.team1.mixIt.common.validation.MaxFileSize;
 import com.team1.mixIt.post.dto.request.PostCreateRequest;
 import com.team1.mixIt.post.dto.request.PostUpdateRequest;
 import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.dto.response.LikeResponse;
-import com.team1.mixIt.post.enums.Category;
 import com.team1.mixIt.post.exception.BadRequestException;
+import com.team1.mixIt.post.enums.Category;
 import com.team1.mixIt.post.service.PostLikeService;
 import com.team1.mixIt.post.service.PostService;
 import com.team1.mixIt.image.entity.Image;
@@ -16,10 +14,8 @@ import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -29,7 +25,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -44,81 +39,63 @@ public class PostController {
     private final PostLikeService likeService;
     private final ImageService imageService;
 
-    // Multipart/form-data 요청 (이미지 포함 또는 없는 경우)
+    /**
+     * 게시물 생성: JSON-only 또는 multipart/form-data 모두 지원
+     */
     @PostMapping(
             consumes = {
                     MediaType.APPLICATION_JSON_VALUE,
                     MediaType.MULTIPART_FORM_DATA_VALUE
             }
-    )    @ResponseStatus(HttpStatus.CREATED)
-    public ResponseTemplate<Long> createPostMultipart(
+    )
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseTemplate<Long> createPost(
             @AuthenticationPrincipal User user,
-            @Valid @RequestPart("dto") PostCreateRequest dto,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images
+            // multipart/form-data 요청 시 DTO 바인딩
+            @Valid @RequestPart(value = "dto", required = false) PostCreateRequest dtoPart,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            // application/json 요청 시 DTO 바인딩
+            @Valid @RequestBody(required = false) PostCreateRequest dtoJson
     ) {
+        // 실제 사용할 DTO 선택
+        PostCreateRequest dto = dtoPart != null ? dtoPart : dtoJson;
+        if (dto == null) {
+            throw new BadRequestException("요청 본문이 비어 있습니다.");
+        }
+
+        // 이미지 검증 및 업로드
         List<Long> imageIds = validateAndUploadImages(user, images);
         dto.setImageIds(imageIds);
-        return ResponseTemplate.ok(postService.createPost(user.getId(), dto));
+
+        // 서비스 호출
+        return ResponseTemplate.ok(
+                postService.createPost(user.getId(), dto)
+        );
     }
 
-    // JSON-only 요청 (이미지 없는 경우)
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    @ResponseStatus(HttpStatus.CREATED)
-    public ResponseTemplate<Long> createPostJson(
-            @AuthenticationPrincipal User user,
-            @Valid @RequestBody PostCreateRequest dto
-    ) {
-        dto.setImageIds(Collections.emptyList());
-        return ResponseTemplate.ok(postService.createPost(user.getId(), dto));
-    }
-
-    // 공통 이미지 검증 및 업로드 로직
-    private List<Long> validateAndUploadImages(User user, List<MultipartFile> images) {
-        if (images == null || images.isEmpty()) {
-            return Collections.emptyList();
-        }
-        if (images.size() > 10) {
-            throw new BadRequestException("최대 10장까지 업로드 가능합니다.");
-        }
-        List<Long> imageIds = new ArrayList<>();
-        for (MultipartFile file : images) {
-            if (file.getSize() > 10 * 1024 * 1024) {
-                throw new BadRequestException("이미지 파일은 10MB 이하만 가능합니다.");
-            }
-            String ext = Objects.requireNonNull(file.getOriginalFilename())
-                    .substring(file.getOriginalFilename().lastIndexOf('.') + 1)
-                    .toLowerCase();
-            if (!List.of("jpg","jpeg","png").contains(ext)) {
-                throw new BadRequestException("JPG/PNG만 지원합니다.");
-            }
-            Image img = (user != null && user.getLoginId() != null)
-                    ? imageService.create(file, user.getLoginId())
-                    : imageService.create(file);
-            imageIds.add(img.getId());
-        }
-        return imageIds;
-    }
-
+    /**
+     * 전체 게시물 조회
+     */
     @Operation(summary = "전체 게시물 목록 조회", description = "카테고리, 키워드, 정렬, 페이징 조건으로 조회합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @GetMapping
     public ResponseTemplate<List<PostResponse>> getAllPosts(
             @AuthenticationPrincipal User user,
             @RequestParam(required = false) Category category,
-            @RequestParam(required = false) String type,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        List<PostResponse> list = postService.getAllPosts(
-                user.getId(), category, keyword,
-                sortBy, sortDir, page, size
+        return ResponseTemplate.ok(
+                postService.getAllPosts(user.getId(), category, keyword, sortBy, sortDir, page, size)
         );
-        return ResponseTemplate.ok(list);
     }
 
+    /**
+     * 게시물 상세 조회
+     */
     @Operation(summary = "게시물 상세 조회", description = "게시물을 조회하고 조회수를 증가시킵니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @GetMapping("/{id}")
@@ -128,68 +105,32 @@ public class PostController {
     ) {
         PostResponse dto = postService.getPostById(id, user.getId());
         dto.setIsAuthor(dto.getUserId().equals(user.getId()));
-
-        if (dto.getImageIds() == null || dto.getImageIds().isEmpty()) {
-            dto.setDefaultImageUrl(""); //default 이미지 주소로 교체 필요
-        }
         return ResponseTemplate.ok(dto);
     }
 
-
+    /**
+     * 게시물 수정 (multipart/form-data 전용)
+     */
     @Operation(summary = "게시물 수정", description = "내가 쓴 게시물을 수정합니다.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "수정 성공"),
-            @ApiResponse(responseCode = "400", description = "검증 실패")
-    })
+    @ApiResponse(responseCode = "200", description = "수정 성공")
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseTemplate<Void> updatePost(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
             @Valid @RequestPart("dto") PostUpdateRequest dto,
-            @RequestPart(value = "images", required = false)
-            List<MultipartFile> images
+            @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) {
-        if (images != null) {
-            if (images.size() > 10) {
-                throw new BadRequestException("최대 10장까지 업로드 가능합니다.");
-            }
-            for (MultipartFile file : images) {
-                if (file.getSize() > 10 * 1024 * 1024) {
-                    throw new BadRequestException("이미지 파일은 10MB 이하만 가능합니다.");
-                }
-                String ext = Objects.requireNonNull(file.getOriginalFilename())
-                        .substring(file.getOriginalFilename().lastIndexOf('.') + 1)
-                        .toLowerCase();
-                if (!List.of("jpg","jpeg","png").contains(ext)) {
-                    throw new BadRequestException("JPG/PNG만 지원합니다.");
-                }
-            }
-        }
-
-        List<Long> newImageIds = (images == null || images.isEmpty())
-                ? Collections.emptyList()
-                : images.stream()
-                .map(file -> {
-                    if (user != null && user.getLoginId() != null) {
-                        return imageService.create(file, user.getLoginId()).getId();
-                    } else {
-                        return imageService.create(file).getId();
-                    }
-                })
-                .toList();
-
-        List<Long> finalImageIds = new ArrayList<>();
-        if (dto.getImageIds() != null) {
-            finalImageIds.addAll(dto.getImageIds());
-        }
-        finalImageIds.addAll(newImageIds);
-        dto.setImageIds(finalImageIds);
+        // 이미지 검증 및 업로드
+        List<Long> imageIds = validateAndUploadImages(user, images);
+        dto.setImageIds(imageIds);
 
         postService.updatePost(user.getId(), id, dto);
         return ResponseTemplate.ok();
     }
 
-    @Operation(summary = "게시물 삭제", description = "내가 쓴 게시물을 삭제합니다.")
+    /**
+     * 게시물 삭제
+     */
     @ApiResponse(responseCode = "200", description = "삭제 성공")
     @DeleteMapping("/{id}")
     public ResponseTemplate<Void> deletePost(
@@ -200,11 +141,11 @@ public class PostController {
         return ResponseTemplate.ok();
     }
 
+    /**
+     * 게시물 좋아요 등록/해제
+     */
     @Operation(summary = "게시물 좋아요 등록", description = "게시물에 좋아요를 남깁니다.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "좋아요 등록 성공"),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청")
-    })
+    @ApiResponse(responseCode = "201", description = "좋아요 등록 성공")
     @PostMapping("/{postId}/like")
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseTemplate<LikeResponse> createLike(
@@ -225,6 +166,9 @@ public class PostController {
         return ResponseTemplate.ok();
     }
 
+    /**
+     * 댓글 좋아요 상태 조회
+     */
     @Operation(summary = "좋아요 상태 조회", description = "사용자의 좋아요 여부와 좋아요 수를 반환합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @GetMapping("/{postId}/like")
@@ -233,5 +177,33 @@ public class PostController {
             @PathVariable Long postId
     ) {
         return ResponseTemplate.ok(likeService.status(postId, user.getId()));
+    }
+
+    // 공통 이미지 검증 & 업로드 로직
+    private List<Long> validateAndUploadImages(User user, List<MultipartFile> images) {
+        if (images == null || images.isEmpty()) {
+            return List.of();
+        }
+        if (images.size() > 10) {
+            throw new BadRequestException("최대 10장까지 업로드 가능합니다.");
+        }
+
+        List<Long> ids = new ArrayList<>();
+        for (MultipartFile file : images) {
+            if (file.getSize() > 10 * 1024 * 1024) {
+                throw new BadRequestException("이미지 파일은 10MB 이하만 가능합니다.");
+            }
+            String ext = Objects.requireNonNull(file.getOriginalFilename())
+                    .substring(file.getOriginalFilename().lastIndexOf('.') + 1)
+                    .toLowerCase();
+            if (!List.of("jpg", "jpeg", "png").contains(ext)) {
+                throw new BadRequestException("JPG/PNG만 지원합니다.");
+            }
+            Image img = (user != null && user.getLoginId() != null)
+                    ? imageService.create(file, user.getLoginId())
+                    : imageService.create(file);
+            ids.add(img.getId());
+        }
+        return ids;
     }
 }
