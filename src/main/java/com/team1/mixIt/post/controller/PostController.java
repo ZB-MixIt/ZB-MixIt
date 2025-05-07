@@ -57,20 +57,20 @@ public class PostController {
     }
 
     // multipart/form-data (이미지 포함/미포함 모두 지원)
-//    @Operation(summary = "게시물 생성 (multipart)", description = "이미지 포함/미포함 모두 지원하는 multipart/form-data 요청입니다.")
-//    @ApiResponse(responseCode = "201", description = "생성 성공")
-//    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    @ResponseStatus(HttpStatus.CREATED)
-//    public ResponseTemplate<Long> createPostMultipart(
-//            @AuthenticationPrincipal User user,
-//            @Valid @RequestPart("dto") PostCreateRequest dto,
-//            @RequestPart(value = "images", required = false) List<MultipartFile> images
-//    ) {
-//        List<Long> imageIds = validateAndUploadImages(user, images);
-//        dto.setImageIds(imageIds);
-//        Long postId = postService.createPost(user.getId(), dto);
-//        return ResponseTemplate.ok(postId);
-//    }
+    @Operation(summary = "게시물 생성 (multipart)", description = "이미지 포함/미포함 모두 지원하는 multipart/form-data 요청입니다.")
+    @ApiResponse(responseCode = "201", description = "생성 성공")
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseTemplate<Long> createPostMultipart(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestPart("dto") PostCreateRequest dto,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images
+    ) {
+        List<Long> imageIds = validateAndUploadImages(user, images);
+        dto.setImageIds(imageIds);
+        Long postId = postService.createPost(user.getId(), dto);
+        return ResponseTemplate.ok(postId);
+    }
 
     @Operation(summary = "게시물 상세 조회", description = "게시물을 조회하고 조회수를 증가시킵니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공")
