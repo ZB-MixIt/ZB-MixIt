@@ -1,5 +1,7 @@
 package com.team1.mixIt.post.dto.response;
 
+import com.team1.mixIt.image.entity.Image;
+import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.entity.PostHashtag;
 import com.team1.mixIt.post.enums.Category;
@@ -31,6 +33,12 @@ public class PostResponse {
     @Schema(description = "첨부 이미지 ID 목록", example = "[1, 2, 3]")
     private List<Long> imageIds;
 
+    @Schema(description = "첨부 이미지 URL 목록", example = "[\"https://.../img1.jpg\",\"https://.../img2.png\"]")
+    private List<String> imageUrls;
+
+    @Schema(description = "대표 이미지 URL (없으면 기본 이미지)", example = "https://../기본이미지.png")
+    private String defaultImageUrl;
+
     @Schema(description = "조회수", example = "0")
     private Integer viewCount;
 
@@ -46,27 +54,38 @@ public class PostResponse {
     @Schema(description = "게시물 태그 목록")
     private List<String> tags;
 
-    @Schema(description = "대표 이미지 URL (없으면 기본 이미지)", example = "https://../기본이미지.png")
-    private String defaultImageUrl;
-
     @Schema(description = "현재 사용자가 작성자인지 여부", example = "true")
     private Boolean isAuthor;
 
-    public static PostResponse fromEntity(Post p, Long currentUserId, String defaultImgUrl) {
+
+    public static PostResponse fromEntity(
+            Post p,
+            Long currentUserId,
+            String defaultImageUrl,
+            ImageService imageService
+    ) {
+        List<Long> ids = p.getImageIds();
+        List<String> urls = ids.stream()
+                .map(imageService::findById)
+                .map(Image::getUrl)
+                .toList();
+
         boolean authorFlag = currentUserId != null && p.getUserId().equals(currentUserId);
+
         return PostResponse.builder()
                 .id(p.getId())
                 .userId(p.getUserId())
                 .category(p.getCategory())
                 .title(p.getTitle())
                 .content(p.getContent())
-                .imageIds(p.getImageIds())
+                .imageIds(ids)
+                .imageUrls(urls)
+                .defaultImageUrl(ids.isEmpty() ? defaultImageUrl : null)
                 .viewCount(p.getViewCount())
                 .bookmarkCount(p.getBookmarkCount())
                 .hasLiked(false)
                 .likeCount(0L)
                 .tags(p.getHashtag().stream().map(PostHashtag::getHashtag).toList())
-                .defaultImageUrl(p.getImageIds().isEmpty() ? defaultImgUrl : null)
                 .isAuthor(authorFlag)
                 .build();
     }

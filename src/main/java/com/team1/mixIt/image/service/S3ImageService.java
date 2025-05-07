@@ -162,6 +162,12 @@ public class S3ImageService implements ImageService {
     }
 
     @Override
+   public Image findById(Long id) {
+        return imageRepository.findById(id)
+                              .orElseThrow(ImageNotFoundException::new);
+         }
+
+    @Override
     public List<Image> findAllById(List<Long> ids) {
         List<Image> images = imageRepository.findAllById(ids);
         if (images.size() != ids.size()) throw new ImageNotFoundException();

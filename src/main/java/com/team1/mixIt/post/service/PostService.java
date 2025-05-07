@@ -76,7 +76,7 @@ public class PostService {
     }
 
     @Transactional
-    public PostResponse getPostById(Long postId, Long currentUserId) {
+    public PostResponse getPostById(Long postId, Long currentUserId, ImageService imageService) {
         postRepository.increaseViewCount(postId);
         actionLogRepository.save(ActionLog.builder()
                 .postId(postId)
@@ -93,7 +93,7 @@ public class PostService {
                 .isPresent();
         long likeCnt = postLikeRepository.countByPostId(postId);
 
-        PostResponse dto = PostResponse.fromEntity(p, currentUserId, DEFAULT_IMAGE_URL);
+        PostResponse dto = PostResponse.fromEntity(p, currentUserId, DEFAULT_IMAGE_URL, imageService);
         dto.setHasLiked(hasLiked);
         dto.setLikeCount(likeCnt);
         return dto;
@@ -134,14 +134,16 @@ public class PostService {
                             .findByPostIdAndUserId(p.getId(), currentUserId)
                             .isPresent();
                     long cnt = postLikeRepository.countByPostId(p.getId());
+                    PostResponse dto = PostResponse.fromEntity(
+                            p, currentUserId, DEFAULT_IMAGE_URL, imageService);
 
-                    PostResponse dto = PostResponse.fromEntity(p, currentUserId, DEFAULT_IMAGE_URL);
                     dto.setHasLiked(liked);
                     dto.setLikeCount(cnt);
                     return dto;
                 })
                 .toList();
     }
+
 
     @Transactional
     public void updatePost(Long userId, Long postId, PostUpdateRequest req) {
@@ -188,5 +190,9 @@ public class PostService {
             throw new AccessDeniedException("내 글만 삭제할 수 있습니다.");
         }
         postRepository.delete(p);
+    }
+
+    public boolean existsById(Long postId) {
+        return postRepository.existsById(postId);
     }
 }

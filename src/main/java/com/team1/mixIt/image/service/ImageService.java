@@ -25,6 +25,8 @@ public interface ImageService {
 
     List<Image> findAllById(List<Long> ids);
 
+    Image findById(Long id);
+
     void updateAssignedImages(List<Long> originalIds, List<Long> newIds);
 
 }

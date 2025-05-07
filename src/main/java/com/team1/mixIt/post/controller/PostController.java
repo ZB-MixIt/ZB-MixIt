@@ -79,10 +79,10 @@ public class PostController {
             @PathVariable Long id,
             @AuthenticationPrincipal User user
     ) {
-        PostResponse dto = postService.getPostById(id, user.getId());
-        dto.setIsAuthor(dto.getUserId().equals(user.getId()));
-        return ResponseTemplate.ok(dto);
-    }
+                Long currentUserId = user != null ? user.getId() : null;
+                PostResponse dto = postService.getPostById(id, currentUserId, imageService);
+                return ResponseTemplate.ok(dto);
+            }
 
     @Operation(summary = "게시물 수정", description = "이미지 포함/미포함 수정 모두 지원 (multipart/form-data 전용)")
     @ApiResponse(responseCode = "200", description = "수정 성공")
