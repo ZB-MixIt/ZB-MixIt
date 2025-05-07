@@ -40,4 +40,8 @@ public class Review extends BaseEntity {
     @Column(name = "image_ids", columnDefinition = "JSON")
     @Builder.Default
     private List<Long> imageIds = new ArrayList<>();
+
+    @Column(name = "like_count", nullable = false)
+    @Builder.Default
+    private long likeCount = 0L;
 }

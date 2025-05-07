@@ -1,6 +1,7 @@
 package com.team1.mixIt.post.controller;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
+import com.team1.mixIt.post.dto.response.LikeResponse;
 import com.team1.mixIt.post.service.ReviewLikeService;
 import com.team1.mixIt.post.service.ReviewService;
 import com.team1.mixIt.user.entity.User;
@@ -57,5 +58,23 @@ public class ReviewLikeController {
         }
         likeService.unlike(reviewId, user.getId());
         return ResponseTemplate.ok();
+    }
+
+    @Operation(summary = "리뷰 좋아요 상태 조회", description = "현재 사용자의 좋아요 여부와 총 좋아요 수를 반환합니다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @GetMapping
+    public ResponseTemplate<LikeResponse> status(
+            @PathVariable Long postId,
+            @PathVariable Long reviewId,
+            @AuthenticationPrincipal User user
+    ) {
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 필요");
+        }
+        if (!reviewService.existsByIdAndPostId(reviewId, postId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "리뷰 없음");
+        }
+        LikeResponse resp = likeService.status(reviewId, user.getId());
+        return ResponseTemplate.ok(resp);
     }
 }
