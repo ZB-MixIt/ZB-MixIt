@@ -60,18 +60,18 @@ public class PostLikeService {
 
     @Transactional
     public void removeLike(Long postId, Long userId) {
-        postLikeRepository.findByPostIdAndUserId(postId, userId)
-                .ifPresent(like -> {
-                    postLikeRepository.delete(like);
-                    postRepository.decreaseLikeCount(postId);
-
-                    actionLogRepository.save(ActionLog.builder()
-                            .postId(postId)
-                            .userId(userId)
-                            .actionType("UNLIKE")
-                            .build());
-                });
+        if (postLikeRepository.findByPostIdAndUserId(postId, userId).isPresent()) {
+            postLikeRepository.deleteByPostIdAndUserId(postId, userId);
+            postRepository.decreaseLikeCount(postId);
+            actionLogRepository.save(ActionLog.builder()
+                    .postId(postId)
+                    .userId(userId)
+                    .actionType("UNLIKE")
+                    .build()
+            );
+        }
     }
+
 
     public LikeResponse status(Long postId, Long userId) {
         if (!postRepository.existsById(postId)) {

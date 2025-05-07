@@ -15,7 +15,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     long countByPostId(Long postId);
 
-    @Query("SELECT COALESCE(AVG(r.rate), 0) FROM Review r WHERE r.post.id = :postId")
+    boolean existsByIdAndPostId(Long id, Long postId);
+
+@Query("SELECT COALESCE(AVG(r.rate), 0) FROM Review r WHERE r.post.id = :postId")
     BigDecimal findAverageRateByPostId(@Param("postId") Long postId);
 
 }

@@ -106,4 +106,8 @@ public class ReviewService {
                 .setScale(1, RoundingMode.HALF_UP);
         post.setAvgRating(avg.doubleValue());
     }
+
+    public boolean existsByIdAndPostId(Long reviewId, Long postId) {
+        return reviewRepo.existsByIdAndPostId(reviewId, postId);
+    }
 }
