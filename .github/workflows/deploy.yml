@@ -64,5 +64,22 @@ jobs:
 
             # 백그라운드로 실행
             echo "Starting application..."
-            java -jar "$JAR_FILE" --spring.profiles.active=dev \
-              --spring.config.location=classpath:/,file:./custom-config/ &
+            nohup java -jar "$JAR_FILE" \
+              --spring.profiles.active=dev \
+              --spring.config.location=classpath:/,file:./custom-config/ \
+              > /dev/null 2>&1 < /dev/null & disown
+      
+            # Health check: 5초 간격, 최대 36회(3분)
+            MAX_ATTEMPTS=36
+            for ((i=1;i<=MAX_ATTEMPTS;i++)); do
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/terms)
+              if [ "$HTTP_CODE" -eq 200 ]; then
+                echo "✅ Application is healthy (HTTP 200) on attempt $i."
+                exit 0
+              fi
+              echo "⏳ Waiting for app to be ready (attempt $i/$MAX_ATTEMPTS)..."
+              sleep 5
+            done
+      
+            echo "❌ Application did not respond with HTTP 200 within 3 minutes."
+            exit 1
