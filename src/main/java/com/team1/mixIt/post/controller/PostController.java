@@ -45,8 +45,12 @@ public class PostController {
     private final ImageService imageService;
 
     // Multipart/form-data 요청 (이미지 포함 또는 없는 경우)
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @ResponseStatus(HttpStatus.CREATED)
+    @PostMapping(
+            consumes = {
+                    MediaType.APPLICATION_JSON_VALUE,
+                    MediaType.MULTIPART_FORM_DATA_VALUE
+            }
+    )    @ResponseStatus(HttpStatus.CREATED)
     public ResponseTemplate<Long> createPostMultipart(
             @AuthenticationPrincipal User user,
             @Valid @RequestPart("dto") PostCreateRequest dto,
