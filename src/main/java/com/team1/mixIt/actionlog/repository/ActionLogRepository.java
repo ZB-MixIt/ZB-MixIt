@@ -15,26 +15,29 @@ public interface ActionLogRepository extends JpaRepository<ActionLog, Long> {
       SELECT a.postId
         FROM ActionLog a
        WHERE a.actionType = 'VIEW'
-         AND a.actionTime >= :todayStart
+         AND a.actionTime BETWEEN :start AND :end
        GROUP BY a.postId
        ORDER BY COUNT(a.id) DESC, MAX(a.actionTime) DESC
     """)
     Page<Long> findTopViewedPostIds(
-            @Param("todayStart") LocalDate todayStart,
+            @Param("start") LocalDateTime start,
+            @Param("end")   LocalDateTime end,
             Pageable pageable
     );
+
 
     // 오늘 북마크 로그를 집계해 북마크 순으로 포스트 ID 반환
     @Query("""
       SELECT a.postId
         FROM ActionLog a
        WHERE a.actionType = 'BOOKMARK'
-         AND a.actionTime >= :todayStart
+         AND a.actionTime BETWEEN :start AND :end
        GROUP BY a.postId
        ORDER BY COUNT(a.id) DESC, MAX(a.actionTime) DESC
     """)
     Page<Long> findTopBookmarkedPostIds(
-            @Param("todayStart") LocalDate todayStart,
+            @Param("start") LocalDateTime start,
+            @Param("end")   LocalDateTime end,
             Pageable pageable
     );
 

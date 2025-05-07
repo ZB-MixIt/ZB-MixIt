@@ -47,9 +47,12 @@ public class HomeFeedService {
     // 당일 조회수 Top N (페이징)
     @Transactional(readOnly = true)
     public Page<PostResponse> getTodayTopViewed(int page, int size) {
-        LocalDate today = LocalDate.now();
+        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
+        LocalDateTime startOfTomorrow = startOfToday.plusDays(1);
+
         Page<Long> ids = actionLogRepository.findTopViewedPostIds(
-                today,
+                startOfToday,
+                startOfTomorrow,
                 PageRequest.of(page, size, Sort.unsorted())
         );
 
@@ -58,6 +61,7 @@ public class HomeFeedService {
             return PostResponse.fromEntity(p, null, null);
         });
     }
+
 
     // 주간 조회수 Top N (페이징)
     @Transactional(readOnly = true)
@@ -85,9 +89,13 @@ public class HomeFeedService {
     // 당일 북마크 Top N (페이징)
     @Transactional(readOnly = true)
     public Page<PostResponse> getTodayTopBookmarked(int page, int size) {
-        LocalDate today = LocalDate.now();
+        // 오늘 00:00부터 내일 00:00 전까지의 범위 설정
+        LocalDateTime startOfToday    = LocalDate.now().atStartOfDay();
+        LocalDateTime startOfTomorrow = startOfToday.plusDays(1);
+
         Page<Long> ids = actionLogRepository.findTopBookmarkedPostIds(
-                today,
+                startOfToday,
+                startOfTomorrow,
                 PageRequest.of(page, size, Sort.unsorted())
         );
 
