@@ -67,50 +67,45 @@ public class ReviewController {
         );
     }
 
-    @Operation(summary = "리뷰 수정", description = "텍스트만/이미지만/텍스트+이미지 수정 모두 지원")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "리뷰 수정 성공"),
-            @ApiResponse(responseCode = "400", description = "검증 실패"),
-            @ApiResponse(responseCode = "404", description = "리뷰 없음 또는 권한 없음"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "500", description = "서버 에러")
-    })
+    @Operation(summary = "리뷰 수정 (JSON)", description = "텍스트만 수정")
     @PutMapping(
             path = "/{reviewId}",
-            consumes = {
-                    MediaType.APPLICATION_JSON_VALUE,
-                    MediaType.MULTIPART_FORM_DATA_VALUE
-            },
+            consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseTemplate<ReviewResponse> update(
+    public ResponseTemplate<ReviewResponse> updateJson(
             @PathVariable Long postId,
             @PathVariable Long reviewId,
             @AuthenticationPrincipal User user,
+            @RequestBody @Valid ReviewRequest req
+    ) {
+        return ResponseTemplate.ok(
+                svc.updateReview(reviewId, user, req)
+        );
+    }
 
-            // JSON 바인딩
-            @RequestBody(required = false)
-            @Valid ReviewRequest jsonReq,
-
-            // multipart dto 바인딩
-            @RequestPart(value = "dto", required = false)
-            @Valid ReviewRequest partReq,
-
-            // multipart 로 넘어온 이미지들 (없으면 null)
+    // multipart 전용 수정
+    @Operation(summary = "리뷰 수정 (multipart)", description = "이미지 변경/추가/삭제 + 텍스트 수정")
+    @PutMapping(
+            path = "/{reviewId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseTemplate<ReviewResponse> updateMultipart(
+            @PathVariable Long postId,
+            @PathVariable Long reviewId,
+            @AuthenticationPrincipal User user,
+            @RequestPart("dto") @Valid ReviewRequest req,
             @RequestPart(value = "images", required = false)
             List<MultipartFile> images
     ) {
-        // JSON multipart 중 어느쪽 결정
-        ReviewRequest req = (jsonReq != null) ? jsonReq : partReq;
-
-        // multipart 인 경우에만 이미지 업로드
-        List<Long> newImageIds = uploadAndGetIds(images, user);
-        req.setImageIds(newImageIds);
-
-        //서비스 호출 및 응답
-        ReviewResponse resp = svc.updateReview(reviewId, user, req);
-        return ResponseTemplate.ok(resp);
+        List<Long> imgIds = uploadAndGetIds(images, user);
+        req.setImageIds(imgIds);
+        return ResponseTemplate.ok(
+                svc.updateReview(reviewId, user, req)
+        );
     }
+
 
     @Operation(summary = "리뷰 삭제", description = "본인이 작성한 리뷰를 삭제합니다.")
     @DeleteMapping("/{reviewId}")
