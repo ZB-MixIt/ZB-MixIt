@@ -1,5 +1,8 @@
 package com.team1.mixIt.post.service;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.team1.mixIt.actionlog.entity.ActionLog;
 import com.team1.mixIt.actionlog.repository.ActionLogRepository;
 import com.team1.mixIt.notification.event.NotificationEvent;
@@ -24,7 +27,7 @@ public class PostLikeService {
     @Transactional
     public LikeResponse addLike(Long postId, Long userId) {
         if (!postRepository.existsById(postId)) {
-            throw new RuntimeException("존재하지 않는 게시물입니다.");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시물을 찾을 수 없습니다.");
         }
 
         boolean hasLiked = postLikeRepository.findByPostIdAndUserId(postId, userId).isEmpty();
