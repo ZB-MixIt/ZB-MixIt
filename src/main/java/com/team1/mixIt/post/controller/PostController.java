@@ -44,46 +44,55 @@ public class PostController {
     private final PostLikeService likeService;
     private final ImageService imageService;
 
+    // Multipart/form-data 요청 (이미지 포함 또는 없는 경우)
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseTemplate<Long> createPost(
+    public ResponseTemplate<Long> createPostMultipart(
             @AuthenticationPrincipal User user,
             @Valid @RequestPart("dto") PostCreateRequest dto,
-            @RequestPart(value = "images", required = false)
-            List<MultipartFile> images
+            @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) {
-        if (images != null) {
-            if (images.size() > 10) {
-                throw new BadRequestException("최대 10장까지 업로드 가능합니다.");
-            }
-            for (MultipartFile file : images) {
-                if (file.getSize() > 10 * 1024 * 1024) {
-                    throw new BadRequestException("이미지 파일은 10MB 이하만 가능합니다.");
-                }
-                String ext = Objects.requireNonNull(file.getOriginalFilename())
-                        .substring(file.getOriginalFilename().lastIndexOf('.') + 1)
-                        .toLowerCase();
-                if (!List.of("jpg","jpeg","png").contains(ext)) {
-                    throw new BadRequestException("JPG/PNG만 지원합니다.");
-                }
-            }
-        }
-
-        List<Long> imageIds = (images == null || images.isEmpty())
-                ? Collections.emptyList()
-                : images.stream()
-                .map(file -> {
-                    if (user != null && user.getLoginId() != null) {
-                        return imageService.create(file, user.getLoginId()).getId();
-                    } else {
-                        return imageService.create(file).getId();
-                    }
-                })
-                .toList();
-
+        List<Long> imageIds = validateAndUploadImages(user, images);
         dto.setImageIds(imageIds);
-        Long postId = postService.createPost(user.getId(), dto);
-        return ResponseTemplate.ok(postId);
+        return ResponseTemplate.ok(postService.createPost(user.getId(), dto));
+    }
+
+    // JSON-only 요청 (이미지 없는 경우)
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseTemplate<Long> createPostJson(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody PostCreateRequest dto
+    ) {
+        dto.setImageIds(Collections.emptyList());
+        return ResponseTemplate.ok(postService.createPost(user.getId(), dto));
+    }
+
+    // 공통 이미지 검증 및 업로드 로직
+    private List<Long> validateAndUploadImages(User user, List<MultipartFile> images) {
+        if (images == null || images.isEmpty()) {
+            return Collections.emptyList();
+        }
+        if (images.size() > 10) {
+            throw new BadRequestException("최대 10장까지 업로드 가능합니다.");
+        }
+        List<Long> imageIds = new ArrayList<>();
+        for (MultipartFile file : images) {
+            if (file.getSize() > 10 * 1024 * 1024) {
+                throw new BadRequestException("이미지 파일은 10MB 이하만 가능합니다.");
+            }
+            String ext = Objects.requireNonNull(file.getOriginalFilename())
+                    .substring(file.getOriginalFilename().lastIndexOf('.') + 1)
+                    .toLowerCase();
+            if (!List.of("jpg","jpeg","png").contains(ext)) {
+                throw new BadRequestException("JPG/PNG만 지원합니다.");
+            }
+            Image img = (user != null && user.getLoginId() != null)
+                    ? imageService.create(file, user.getLoginId())
+                    : imageService.create(file);
+            imageIds.add(img.getId());
+        }
+        return imageIds;
     }
 
     @Operation(summary = "전체 게시물 목록 조회", description = "카테고리, 키워드, 정렬, 페이징 조건으로 조회합니다.")
