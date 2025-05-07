@@ -36,7 +36,9 @@ public class PostLikeController {
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseTemplate<LikeResponse> createLike(
             @PathVariable Long postId,
-            @AuthenticationPrincipal User user
+            @AuthenticationPrincipal User user,
+            @RequestBody(required = false) Object ignoreBody
+
     ) {
         if (user == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 필요");
