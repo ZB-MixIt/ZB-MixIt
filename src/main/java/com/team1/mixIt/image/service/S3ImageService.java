@@ -8,12 +8,13 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.util.IOUtils;
 import com.team1.mixIt.common.code.ResponseCode;
 import com.team1.mixIt.common.exception.ClientException;
+import com.team1.mixIt.common.exception.ServerException;
 import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.image.repository.ImageRepository;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,17 +32,25 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class S3ImageService implements ImageService {
+    private static final Logger log = LoggerFactory.getLogger(S3ImageService.class);
 
-    @Value("${cloud.aws.s3.bucket-name}")
-    private String bucketName;
-
+    private final String bucketName;
     private final AmazonS3 amazonS3;
     private final ImageRepository imageRepository;
     private final UserRepository userRepository;
+
+    public S3ImageService(
+            @Value("${cloud.aws.s3.bucket-name}") String bucketName,
+            AmazonS3 amazonS3,
+            ImageRepository imageRepository,
+            UserRepository userRepository) {
+        this.bucketName = bucketName;
+        this.amazonS3 = amazonS3;
+        this.imageRepository = imageRepository;
+        this.userRepository = userRepository;
+    }
 
     @Override
     public Image create(MultipartFile image) {
@@ -51,17 +60,17 @@ public class S3ImageService implements ImageService {
     @Override
     public Image create(MultipartFile file, String loginId) {
         if (file.isEmpty() || Objects.isNull(file.getOriginalFilename())) {
-            throw new RuntimeException(); // Todo Exception 정의
+            throw new ClientException(ResponseCode.IMAGE_NOT_PROVIDED);
         }
 
         if (!this.validateExtension(file.getOriginalFilename()))
-            throw new RuntimeException(); // Todo Exception 정의
+            throw new ClientException(ResponseCode.IMAGE_EXTENSION_NOT_SUPPORTED);
 
         String src;
         try {
             src = uploadS3(file);
-        } catch (IOException e) {
-            throw new RuntimeException(); // Todo Exception 정의
+        } catch (Exception e) {
+            throw new ServerException(ResponseCode.S3_SERVER_ERROR, e);
         }
 
         Image.ImageBuilder builder = Image.builder()
@@ -69,20 +78,19 @@ public class S3ImageService implements ImageService {
         userRepository.findByLoginId(loginId).ifPresent(builder::user);
         Image image = builder.build();
 
-        // Todo save 실패에 따른 처리 로직 필요
         return imageRepository.save(image);
     }
 
     @Override
     public void delete(Long imageId, User user) {
-        Image image = imageRepository.findById(imageId).orElseThrow(); // Todo Exception 정의
+        Image image = imageRepository.findById(imageId).orElseThrow(() -> new ClientException(ResponseCode.IMAGE_NOT_FOUND));
         delete(image, user);
     }
 
     @Override
     public void delete(Image image, User user) {
         if (image.getUser() != user)
-            throw new RuntimeException(); // Todo Exception 정의
+            throw new ClientException(ResponseCode.FORBIDDEN);
         delete(image);
     }
 
@@ -130,8 +138,6 @@ public class S3ImageService implements ImageService {
                     new PutObjectRequest(bucketName, s3FileName, byteArrayInputStream, metadata)
                             .withCannedAcl(CannedAccessControlList.PublicRead);
             amazonS3.putObject(putObjectRequest);
-        } catch (Exception e) {
-            throw new RuntimeException(e); // Todo Exception 정의
         } finally {
             byteArrayInputStream.close();
             is.close();
@@ -158,7 +164,7 @@ public class S3ImageService implements ImageService {
             String decodingKey = URLDecoder.decode(url.getPath(), StandardCharsets.UTF_8);
             return decodingKey.substring(1);
         } catch (MalformedURLException e) {
-            throw new RuntimeException(e); // Todo Exception 정의
+            throw new ServerException(ResponseCode.S3_SERVER_ERROR, e);
         }
     }
 

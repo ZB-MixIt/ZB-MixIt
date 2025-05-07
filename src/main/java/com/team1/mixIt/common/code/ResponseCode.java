@@ -37,8 +37,13 @@ public enum ResponseCode {// Success
     // 이미지 관련
     IMAGE_NOT_FOUND                     ("400_001", HttpStatus.BAD_REQUEST, "Image not found"),
     IMAGE_OWNER_ALREADY_EXIST           ("400_002", HttpStatus.BAD_REQUEST, "Image owner already exists"),
+    IMAGE_NOT_PROVIDED                         ("400_003", HttpStatus.BAD_REQUEST, "Image file not provided"),
+    IMAGE_EXTENSION_NOT_SUPPORTED       ("400_004", HttpStatus.BAD_REQUEST, "Image extension not supported"),
 
-    INTERNAL_SERVER_ERROR               ("500_000", HttpStatus.INTERNAL_SERVER_ERROR,   "Internal Server Error");
+
+    INTERNAL_SERVER_ERROR               ("500_000", HttpStatus.INTERNAL_SERVER_ERROR,   "Internal Server Error"),
+    S3_SERVER_ERROR                     ("500_001", HttpStatus.INTERNAL_SERVER_ERROR,   "Internal Server Error")
+    ;
 
     private final String code;
     private final HttpStatus httpStatus;

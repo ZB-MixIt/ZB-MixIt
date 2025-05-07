@@ -5,7 +5,8 @@ import com.team1.mixIt.common.code.ResponseCode;
 public class ServerException extends RuntimeException {
     private final ResponseCode code;
 
-    public ServerException(ResponseCode code) {
+    public ServerException(ResponseCode code, Exception e) {
+        super(e);
         this.code = code;
     }
 
