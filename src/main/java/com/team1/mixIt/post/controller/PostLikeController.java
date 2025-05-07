@@ -32,25 +32,30 @@ public class PostLikeController {
             @ApiResponse(responseCode = "404", description = "게시물 없음"),
             @ApiResponse(responseCode = "500", description = "서버 에러")
     })
-    @PostMapping(consumes = MediaType.ALL_VALUE)
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseTemplate<LikeResponse> createLike(
             @PathVariable Long postId,
-            @AuthenticationPrincipal User user,
-            @RequestBody(required = false) Object ignoreBody
-
+            @AuthenticationPrincipal User user
     ) {
         if (user == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 필요");
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "로그인 필요"
+            );
         }
         if (!postService.existsById(postId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시물 없음");
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "게시물 없음"
+            );
         }
         LikeResponse resp = likeService.addLike(postId, user.getId());
         return ResponseTemplate.ok(resp);
     }
 
-    @Operation(summary = "게시물 좋아요 해제", description = "게시물에 남긴 좋아요를 취소합니다 + action_log에 UNLIKE 이벤트 기록")
+    @Operation(
+            summary = "게시물 좋아요 해제",
+            description = "게시물에 남긴 좋아요를 취소합니다 + action_log에 UNLIKE 이벤트 기록"
+    )
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "좋아요 해제 성공"),
             @ApiResponse(responseCode = "401", description = "인증 실패"),
@@ -59,7 +64,7 @@ public class PostLikeController {
     })
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ResponseTemplate<Void> deleteLike(
+    public void deleteLike(
             @PathVariable Long postId,
             @AuthenticationPrincipal User user
     ) {
@@ -70,8 +75,8 @@ public class PostLikeController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시물 없음");
         }
         likeService.removeLike(postId, user.getId());
-        return ResponseTemplate.ok();
     }
+
 
     @Operation(summary = "게시물 좋아요 상태 조회", description = "현재 사용자의 좋아요 여부와 카운트를 조회합니다.")
     @ApiResponses({

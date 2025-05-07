@@ -24,7 +24,6 @@ public class PostLikeService {
     private final ActionLogRepository actionLogRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    @PostMapping
     @Transactional
     public LikeResponse addLike(Long postId, Long userId) {
         var post = postRepository.findById(postId)
