@@ -1,5 +1,6 @@
 package com.team1.mixIt.post.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.post.dto.request.PostCreateRequest;
@@ -85,35 +86,31 @@ public class PostController {
                 return ResponseTemplate.ok(dto);
             }
 
-    @Operation(summary = "게시물 수정 (JSON)", description = "이미지 없이 JSON body 로 수정합니다.")
-    @ApiResponse(responseCode = "200", description = "수정 성공", content = @Content(schema = @Schema(implementation = PostResponse.class)))
-    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseTemplate<PostResponse> updatePostJson(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long id,
-            @Valid @RequestBody PostUpdateRequest dto
-    ) {
-        postService.updatePost(user.getId(), id, dto);
-        PostResponse response = postService.getPostById(id, user.getId(), imageService);
-        return ResponseTemplate.ok(response);
-    }
-
-    @Operation(summary = "게시물 수정 (multipart)", description = "이미지 포함/미포함 모두 지원하는 multipart/form-data 요청입니다.")
+    @Operation(summary = "게시물 수정", description = "이미지 포함/미포함 모두 지원")
     @ApiResponse(responseCode = "200", description = "수정 성공", content = @Content(schema = @Schema(implementation = PostResponse.class)))
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseTemplate<PostResponse> updatePostMultipart(
+    public ResponseTemplate<PostResponse> updatePost(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
-            @RequestPart("dto") PostUpdateRequest dto,
+            @RequestPart("dto") String dtoString,
             @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) {
+        PostUpdateRequest dto;
+        try {
+            dto = new ObjectMapper().readValue(dtoString, PostUpdateRequest.class);
+        } catch (JsonProcessingException e) {
+            throw new BadRequestException("dto JSON 파싱 실패: " + e.getOriginalMessage());
+        }
+
         List<Long> imageIds = validateAndUploadImages(user, images);
         dto.setImageIds(imageIds);
-        postService.updatePost(user.getId(), id, dto);
 
+        postService.updatePost(user.getId(), id, dto);
         PostResponse response = postService.getPostById(id, user.getId(), imageService);
         return ResponseTemplate.ok(response);
     }
+
+
 
     @Operation(summary = "게시물 삭제", description = "내가 쓴 게시물을 삭제합니다.")
     @ApiResponse(responseCode = "200", description = "삭제 성공")
