@@ -83,22 +83,32 @@ public class PostController {
         return ResponseTemplate.ok(dto);
     }
 
-    @Operation(summary = "게시물 수정", description = "JSON만 수정하거나, 이미지 추가/삭제 + 텍스트·태그 수정 모두 지원합니다.")
-    @ApiResponse(responseCode = "200", description = "수정 성공", content = @Content(schema = @Schema(implementation = PostResponse.class)))
-    @PutMapping(value = "/{id}", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.MULTIPART_FORM_DATA_VALUE}, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(
+            value = "/{id}",
+            consumes = {
+                    MediaType.APPLICATION_JSON_VALUE,
+                    MediaType.MULTIPART_FORM_DATA_VALUE
+            },
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
     public ResponseTemplate<PostResponse> updatePost(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
-            // application/json 요청일 땐 body 전체가 이 dto로 바인딩
-            // multipart/form-data 요청일 땐 dto 파트(json)로 바인딩
-            @RequestPart("dto") @Valid PostUpdateRequest dto,
-            @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages,
+
+            // JSON-only 요청일 땐 여기에 바인딩
+            @RequestBody(required = false) @Valid PostUpdateRequest jsonDto,
+
+            // multipart/form-data 요청일 땐 여기에 바인딩
+            @RequestPart(value = "dto", required = false) @Valid PostUpdateRequest partDto,
+
+            @RequestPart(value = "newImages",     required = false) List<MultipartFile> newImages,
             @RequestPart(value = "removeImageIds", required = false) List<Long> removeImageIds
     ) {
-        // 신규 업로드
-        List<Long> uploadedIds = validateAndUploadImages(user, newImages);
+        // 어떤 DTO
+        PostUpdateRequest dto = (jsonDto != null) ? jsonDto : partDto;
 
-        // 기존에 남길 IDs 계산
+        // multipart 로 온 경우만 이미지 처리
+        List<Long> uploaded = validateAndUploadImages(user, newImages);
         List<Long> original = dto.getImageIds() != null
                 ? dto.getImageIds()
                 : Collections.emptyList();
@@ -106,15 +116,12 @@ public class PostController {
                 .filter(id0 -> removeImageIds == null || !removeImageIds.contains(id0))
                 .toList();
 
-        // 최종 imageIds = retained + uploaded
         List<Long> finalImageIds = new ArrayList<>(retained);
-        finalImageIds.addAll(uploadedIds);
+        finalImageIds.addAll(uploaded);
         dto.setImageIds(finalImageIds);
 
-        // 업데이트 로직 실행
+        // 업데이트 실행
         postService.updatePost(user.getId(), id, dto);
-
-        //결과 조회 후 반환
         PostResponse resp = postService.getPostById(id, user.getId(), imageService);
         return ResponseTemplate.ok(resp);
     }
