@@ -13,7 +13,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-
 @RestController
 @RequestMapping("/api/v1/posts/{postId}/reviews/{reviewId}/like")
 @RequiredArgsConstructor
@@ -35,7 +34,6 @@ public class ReviewLikeController {
         if (user == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 필요");
         }
-
         if (!reviewService.existsByIdAndPostId(reviewId, postId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "리뷰 없음");
         }
@@ -43,14 +41,20 @@ public class ReviewLikeController {
         return ResponseTemplate.ok();
     }
 
-
     @Operation(summary = "리뷰 좋아요 해제", description = "등록된 좋아요를 취소합니다.")
     @ApiResponse(responseCode = "200", description = "좋아요 해제 성공")
     @DeleteMapping
     public ResponseTemplate<Void> unlike(
+            @PathVariable Long postId,
             @PathVariable Long reviewId,
             @AuthenticationPrincipal User user
     ) {
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 필요");
+        }
+        if (!reviewService.existsByIdAndPostId(reviewId, postId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "리뷰 없음");
+        }
         likeService.unlike(reviewId, user.getId());
         return ResponseTemplate.ok();
     }
