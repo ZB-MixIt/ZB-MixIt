@@ -6,6 +6,7 @@ import com.team1.mixIt.post.dto.request.PostUpdateRequest;
 import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.dto.response.LikeResponse;
 import com.team1.mixIt.post.exception.BadRequestException;
+import com.team1.mixIt.post.service.PostBookmarkService;
 import com.team1.mixIt.post.service.PostLikeService;
 import com.team1.mixIt.post.service.PostService;
 import com.team1.mixIt.image.entity.Image;
@@ -31,6 +32,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import static com.team1.mixIt.post.service.PostService.DEFAULT_IMAGE_URL;
+
 @Validated
 @RestController
 @RequestMapping(value = "/api/v1/posts", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -41,6 +44,7 @@ public class PostController {
     private final PostService postService;
     private final PostLikeService likeService;
     private final ImageService imageService;
+    private final PostBookmarkService bookmarkService;
 
     @Operation(summary = "게시물 생성 (JSON only)", description = "이미지 없이 JSON body 로 생성합니다.")
     @ApiResponse(responseCode = "201", description = "생성 성공")
@@ -79,7 +83,13 @@ public class PostController {
             @AuthenticationPrincipal User user
     ) {
         Long currentUserId = user != null ? user.getId() : null;
-        PostResponse dto = postService.getPostById(id, currentUserId, imageService);
+        PostResponse dto = PostResponse.fromEntity(
+                postService.getPostEntity(id),
+                currentUserId,
+                DEFAULT_IMAGE_URL,
+                imageService,
+                bookmarkService      // 전달
+        );
         return ResponseTemplate.ok(dto);
     }
 

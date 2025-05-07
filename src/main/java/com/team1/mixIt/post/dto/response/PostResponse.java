@@ -5,10 +5,12 @@ import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.entity.PostHashtag;
 import com.team1.mixIt.post.enums.Category;
+import com.team1.mixIt.post.service.PostBookmarkService;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 
@@ -44,6 +46,9 @@ public class PostResponse {
     @Schema(description = "현재 사용자가 이 게시물을 좋아요한 상태인지", example = "true")
     private Boolean hasLiked;
 
+    @Schema(description = "현재 사용자가 이 게시물을 북마크한 상태인지", example = "true")
+    private Boolean hasBookmarked;
+
     @Schema(description = "좋아요 수", example = "0")
     private Long likeCount;
 
@@ -56,7 +61,8 @@ public class PostResponse {
     @Schema(description = "현재 사용자가 작성자인지 여부", example = "true")
     private Boolean isAuthor;
 
-    @Getter @Setter
+    @Getter
+    @Setter
     @Schema(description = "이미지 DTO")
     public static class ImageDto {
         @Schema(description = "이미지 고유 ID", example = "1")
@@ -75,7 +81,8 @@ public class PostResponse {
             Post p,
             Long currentUserId,
             String defaultImageUrl,
-            ImageService imageService
+            ImageService imageService,
+            PostBookmarkService bookmarkService
     ) {
         List<ImageDto> imgDtos = p.getImageIds().stream()
                 .map(imageService::findById)
@@ -84,6 +91,11 @@ public class PostResponse {
 
         String def = imgDtos.isEmpty() ? defaultImageUrl : imgDtos.get(0).getSrc();
         boolean authorFlag = currentUserId != null && p.getUserId().equals(currentUserId);
+        boolean bookmarkedFlag = currentUserId != null
+                && bookmarkService.getMyBookmarks(currentUserId, 0, 1, Sort.unsorted())
+                .getContent()
+                .stream()
+                .anyMatch(b -> b.getId().equals(p.getId()));
 
         return PostResponse.builder()
                 .id(p.getId())
@@ -96,6 +108,7 @@ public class PostResponse {
                 .viewCount(p.getViewCount())
                 .bookmarkCount(p.getBookmarkCount())
                 .hasLiked(false)
+                .hasBookmarked(bookmarkedFlag)
                 .likeCount(0L)
                 .tags(p.getHashtag().stream().map(PostHashtag::getHashtag).toList())
                 .isAuthor(authorFlag)

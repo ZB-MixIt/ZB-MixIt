@@ -37,7 +37,8 @@ import static java.util.Objects.nonNull;
 @RequiredArgsConstructor
 public class PostService {
 
-    private static final String DEFAULT_IMAGE_URL = "https://mixit-local.s3.ap-northeast-2.amazonaws.com/e94bb2e2-9symbol.png"; // TODO: 기본이미주소..
+    public static final String DEFAULT_IMAGE_URL =
+            "https://mixit-local.s3.ap-northeast-2.amazonaws.com/e94bb2e2-9symbol.png";
 
     private final UserRepository userRepository;
     private final PostRepository postRepository;
@@ -45,6 +46,7 @@ public class PostService {
     private final PostLikeRepository postLikeRepository;
     private final ImageService imageService;
     private final ActionLogRepository actionLogRepository;
+    private final PostBookmarkService postBookmarkService;
 
     @Transactional
     public Long createPost(Long userId, PostCreateRequest req) {
@@ -97,10 +99,16 @@ public class PostService {
                 .isPresent();
         long likeCnt = postLikeRepository.countByPostId(postId);
 
-        PostResponse dto = PostResponse.fromEntity(p, currentUserId, DEFAULT_IMAGE_URL, imageService);
+        PostResponse dto = PostResponse.fromEntity(p, currentUserId, DEFAULT_IMAGE_URL, imageService,postBookmarkService);
         dto.setHasLiked(hasLiked);
         dto.setLikeCount(likeCnt);
         return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public Post getPostEntity(Long postId) {
+        return postRepository.findById(postId)
+                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
     }
 
     @Transactional(readOnly = true)
@@ -139,7 +147,7 @@ public class PostService {
                             .isPresent();
                     long cnt = postLikeRepository.countByPostId(p.getId());
                     PostResponse dto = PostResponse.fromEntity(
-                            p, currentUserId, DEFAULT_IMAGE_URL, imageService);
+                            p, currentUserId, DEFAULT_IMAGE_URL, imageService, postBookmarkService);
 
                     dto.setHasLiked(liked);
                     dto.setLikeCount(cnt);
