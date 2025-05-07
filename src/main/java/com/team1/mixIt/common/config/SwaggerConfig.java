@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
                 version = "v1"
         ),
         security = {
-                @SecurityRequirement(name = "BearerAuth")   // ← 전역으로 붙여줍니다
+                @SecurityRequirement(name = "BearerAuth")
         }
 )
 @SecurityScheme(

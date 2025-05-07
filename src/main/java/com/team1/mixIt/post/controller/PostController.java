@@ -44,93 +44,34 @@ public class PostController {
     private final PostLikeService likeService;
     private final ImageService imageService;
 
-    @Operation(
-            summary = "게시물 생성",
-            description = """
-        • JSON-only: 이미지 없이 JSON body 로 생성  
-        • multipart/form-data: 이미지 포함/미포함 모두 지원
-        """,
-            requestBody = @RequestBody(
-                    content = {
-                            @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = PostCreateRequest.class),
-                                    examples = @ExampleObject(
-                                            name = "JSON-only",
-                                            value = """
-                {
-                  "category":"CAFE",
-                  "title":"제목",
-                  "content":"본문 내용",
-                  "tags":["서브웨이","랜치"],
-                  "imageIds":[]
-                }
-                """
-                                    )
-                            ),
-                            @Content(
-                                    mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-                                    schema = @Schema(
-                                            description = "multipart/form-data {\n  dto: JSON,\n  images: [file,...]\n}",
-                                            type = "object"
-                                    ),
-                                    examples = @ExampleObject(
-                                            name = "multipart",
-                                            value = "--boundary\n" +
-                                                    "Content-Disposition: form-data; name=\"dto\"\n" +
-                                                    "Content-Type: application/json\n\n" +
-                                                    "{\"category\":\"CAFE\",\"title\":\"제목\",\"content\":\"본문\",\"tags\":[\"a\",\"b\"]}\n" +
-                                                    "--boundary\n" +
-                                                    "Content-Disposition: form-data; name=\"images\"; filename=\"pic.jpg\"\n" +
-                                                    "Content-Type: image/jpeg\n\n" +
-                                                    "...binary...\n" +
-                                                    "--boundary--"
-                                    )
-                            )
-                    }
-            )
-    )
-    @PostMapping(
-            consumes = {
-                    MediaType.APPLICATION_JSON_VALUE,
-                    MediaType.MULTIPART_FORM_DATA_VALUE
-            }
-    )
+    @Operation(summary = "게시물 생성 (JSON only)", description = "이미지 없이 JSON body 로 생성합니다.")
+    @ApiResponse(responseCode = "201", description = "생성 성공")
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseTemplate<Long> createPost(
+    public ResponseTemplate<Long> createPostJson(
             @AuthenticationPrincipal User user,
-            @Valid @RequestPart(value = "dto", required = false) PostCreateRequest dtoPart,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images,
-            @Valid @RequestBody(required = false) PostCreateRequest dtoJson
+            @Valid @RequestBody PostCreateRequest dto
     ) {
-        // multipart/form-data 요청 시 dtoPart, JSON-only 요청 시 dtoJson
-        PostCreateRequest dto = dtoPart != null ? dtoPart : dtoJson;
-        if (dto == null) {
-            throw new BadRequestException("요청 본문이 비어 있습니다.");
-        }
-
-        // 이미지가 있으면 업로드하고 ID 리스트 생성
-        List<Long> imageIds = validateAndUploadImages(user, images);
-        dto.setImageIds(imageIds);
-
-        return ResponseTemplate.ok(postService.createPost(user.getId(), dto));
+        // 이미지 ID 리스트는 빈 배열로 채워 줍니다
+        dto.setImageIds(Collections.emptyList());
+        Long postId = postService.createPost(user.getId(), dto);
+        return ResponseTemplate.ok(postId);
     }
 
-    @Operation(summary = "전체 게시물 목록 조회", description = "카테고리, 키워드, 정렬, 페이징 조건으로 조회합니다.")
-    @ApiResponse(responseCode = "200", description = "조회 성공")
-    @GetMapping
-    public ResponseTemplate<List<PostResponse>> getAllPosts(
+    // multipart/form-data (이미지 포함/미포함 모두 지원)
+    @Operation(summary = "게시물 생성 (multipart)", description = "이미지 포함/미포함 모두 지원하는 multipart/form-data 요청입니다.")
+    @ApiResponse(responseCode = "201", description = "생성 성공")
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseTemplate<Long> createPostMultipart(
             @AuthenticationPrincipal User user,
-            @RequestParam(required = false) Category category,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @Valid @RequestPart("dto") PostCreateRequest dto,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) {
-        return ResponseTemplate.ok(
-                postService.getAllPosts(user.getId(), category, keyword, sortBy, sortDir, page, size)
-        );
+        List<Long> imageIds = validateAndUploadImages(user, images);
+        dto.setImageIds(imageIds);
+        Long postId = postService.createPost(user.getId(), dto);
+        return ResponseTemplate.ok(postId);
     }
 
     @Operation(summary = "게시물 상세 조회", description = "게시물을 조회하고 조회수를 증가시킵니다.")
