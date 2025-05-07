@@ -83,6 +83,31 @@ public class PostController {
         return ResponseTemplate.ok(dto);
     }
 
+    @Operation(
+            summary = "게시물 수정 (JSON only)",
+            description = "기존 이미지 변경 없이, imageIds 배열로만 수정합니다."
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "수정 성공",
+            content = @Content(schema = @Schema(implementation = PostResponse.class))
+    )
+    @PutMapping(
+            value = "/{id}",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseTemplate<PostResponse> updatePostJson(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @RequestBody @Valid PostUpdateRequest dto
+    ) {
+        postService.updatePost(user.getId(), id, dto);
+        PostResponse resp = postService.getPostById(id, user.getId(), imageService);
+        return ResponseTemplate.ok(resp);
+    }
+
+
     @Operation(summary = "게시물 수정", description = "기존 이미지 삭제·신규 이미지 업로드·텍스트 수정 모두 지원")
     @Parameter(name = "dto", description = "게시물 텍스트 및 남길 imageIds(JSON)", required = true)
     @Parameter(name = "newImages", description = "업로드할 신규 이미지 파일들", required = false)
