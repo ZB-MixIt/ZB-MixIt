@@ -91,22 +91,15 @@ public class PostController {
     public ResponseTemplate<PostResponse> updatePost(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
-            @RequestPart("dto") String dtoString,
+            @RequestPart("dto") PostUpdateRequest dto,
             @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) {
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            PostUpdateRequest dto = objectMapper.readValue(dtoString, PostUpdateRequest.class);
+        List<Long> imageIds = validateAndUploadImages(user, images);
+        dto.setImageIds(imageIds);
+        postService.updatePost(user.getId(), id, dto);
 
-            List<Long> imageIds = validateAndUploadImages(user, images);
-            dto.setImageIds(imageIds);
-            postService.updatePost(user.getId(), id, dto);
-
-            PostResponse response = postService.getPostById(id, user.getId(), imageService);
-            return ResponseTemplate.ok(response);
-        } catch (Exception e) {
-            throw new BadRequestException("요청 데이터 파싱 실패: " + e.getMessage());
-        }
+        PostResponse response = postService.getPostById(id, user.getId(), imageService);
+        return ResponseTemplate.ok(response);
     }
 
 
