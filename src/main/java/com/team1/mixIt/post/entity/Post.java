@@ -3,6 +3,7 @@ package com.team1.mixIt.post.entity;
 import com.team1.mixIt.common.config.ImageIdListConverter;
 import com.team1.mixIt.common.entity.BaseEntity;
 import com.team1.mixIt.post.enums.Category;
+import com.team1.mixIt.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,6 +21,10 @@ public class Post extends BaseEntity {
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    private User user;
 
     @Enumerated(EnumType.STRING)
     private Category category;

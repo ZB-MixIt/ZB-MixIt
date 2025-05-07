@@ -38,7 +38,7 @@ public class BookmarkResponse {
                 .title(post.getTitle())
                 .imageIds(post.getImageIds())
                 .authorId(post.getUserId())
-//                .authorNickname(post.getUser().getNickname())
+                .authorNickname(post.getUser().getNickname())
                 .bookmarkCount(post.getBookmarkCount())
                 .build();
     }
