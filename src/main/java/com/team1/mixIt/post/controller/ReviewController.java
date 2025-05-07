@@ -1,5 +1,6 @@
 package com.team1.mixIt.post.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.post.dto.request.ReviewRequest;
 import com.team1.mixIt.post.dto.response.ReviewResponse;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
@@ -34,8 +36,7 @@ public class ReviewController {
     private final ReviewService svc;
     private final ImageService imageService;
     private final PostService postSvc;
-
-
+    private final ObjectMapper objectMapper;
 
     @Operation(summary = "리뷰 등록 (JSON)", description = "게시물에 이미지 없이 리뷰와 평점을 추가합니다.")
     @ApiResponses({
@@ -52,9 +53,7 @@ public class ReviewController {
             @AuthenticationPrincipal User user,
             @RequestBody @Valid ReviewRequest req
     ) {
-        return ResponseTemplate.ok(
-                svc.addReview(postId, user, req)
-        );
+        return ResponseTemplate.ok(svc.addReview(postId, user, req));
     }
 
     @Operation(summary = "리뷰 등록 (multipart)", description = "이미지 포함 리뷰 등록")
@@ -62,14 +61,13 @@ public class ReviewController {
     public ResponseTemplate<ReviewResponse> createMultipart(
             @PathVariable Long postId,
             @AuthenticationPrincipal User user,
-            @Valid @RequestPart("dto") ReviewRequest req,
+            @RequestPart("dto") String dtoJson,
             @RequestPart(value = "images", required = false) List<MultipartFile> images
-    ) {
+    ) throws IOException {
+        ReviewRequest req = objectMapper.readValue(dtoJson, ReviewRequest.class);
         List<Long> imgIds = uploadAndGetIds(images, user);
         req.setImageIds(imgIds);
-        return ResponseTemplate.ok(
-                svc.addReview(postId, user, req)
-        );
+        return ResponseTemplate.ok(svc.addReview(postId, user, req));
     }
 
     @Operation(summary = "리뷰 수정 (JSON)", description = "텍스트만 수정")
@@ -84,12 +82,9 @@ public class ReviewController {
             @AuthenticationPrincipal User user,
             @RequestBody @Valid ReviewRequest req
     ) {
-        return ResponseTemplate.ok(
-                svc.updateReview(reviewId, user, req)
-        );
+        return ResponseTemplate.ok(svc.updateReview(reviewId, user, req));
     }
 
-    // multipart 전용 수정
     @Operation(summary = "리뷰 수정 (multipart)", description = "이미지 변경/추가/삭제 + 텍스트 수정")
     @PutMapping(
             path = "/{reviewId}",
@@ -100,17 +95,14 @@ public class ReviewController {
             @PathVariable Long postId,
             @PathVariable Long reviewId,
             @AuthenticationPrincipal User user,
-            @RequestPart("dto") @Valid ReviewRequest req,
-            @RequestPart(value = "images", required = false)
-            List<MultipartFile> images
-    ) {
+            @RequestPart("dto") String dtoJson,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images
+    ) throws IOException {
+        ReviewRequest req = objectMapper.readValue(dtoJson, ReviewRequest.class);
         List<Long> imgIds = uploadAndGetIds(images, user);
         req.setImageIds(imgIds);
-        return ResponseTemplate.ok(
-                svc.updateReview(reviewId, user, req)
-        );
+        return ResponseTemplate.ok(svc.updateReview(reviewId, user, req));
     }
-
 
     @Operation(summary = "리뷰 삭제", description = "본인이 작성한 리뷰를 삭제합니다.")
     @DeleteMapping("/{reviewId}")
@@ -130,24 +122,16 @@ public class ReviewController {
             @AuthenticationPrincipal User user
     ) {
         if (!postSvc.existsById(postId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "게시물 없음"
-            );
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시물 없음");
         }
         Long currentUserId = (user != null) ? user.getId() : null;
-
-        List<ReviewResponse> reviews = svc.listReviews(postId, currentUserId);
-        return ResponseTemplate.ok(reviews);
+        return ResponseTemplate.ok(svc.listReviews(postId, currentUserId));
     }
 
-
     private List<Long> uploadAndGetIds(List<MultipartFile> files, User user) {
-        if (files == null) {
-            return List.of();
-        }
-        if (files.size() > 10) {
-            throw new BadRequestException("최대 10장까지 업로드 가능합니다.");
-        }
+        if (files == null) return List.of();
+        if (files.size() > 10) throw new BadRequestException("최대 10장까지 업로드 가능합니다.");
+
         return files.stream().map(file -> {
             if (file.getSize() > 10 * 1024 * 1024) {
                 throw new BadRequestException("이미지 파일은 10MB 이하만 가능합니다.");
@@ -158,11 +142,9 @@ public class ReviewController {
             if (!List.of("jpg", "jpeg", "png").contains(ext)) {
                 throw new BadRequestException("Jpg/Png만 지원합니다.");
             }
-            if (user != null && user.getLoginId() != null) {
-                return imageService.create(file, user.getLoginId()).getId();
-            } else {
-                return imageService.create(file).getId();
-            }
+            return user != null && user.getLoginId() != null
+                    ? imageService.create(file, user.getLoginId()).getId()
+                    : imageService.create(file).getId();
         }).toList();
     }
 }
