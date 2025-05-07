@@ -2,6 +2,8 @@ package com.team1.mixIt.post.service;
 
 import com.team1.mixIt.actionlog.entity.ActionLog;
 import com.team1.mixIt.actionlog.repository.ActionLogRepository;
+import com.team1.mixIt.common.code.ResponseCode;
+import com.team1.mixIt.common.exception.ClientException;
 import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.request.PostCreateRequest;
@@ -19,8 +21,10 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -86,7 +90,7 @@ public class PostService {
         );
 
         Post p = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("게시물이 없습니다."));
+                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
 
         boolean hasLiked = postLikeRepository
                 .findByPostIdAndUserId(postId, currentUserId)
@@ -148,9 +152,9 @@ public class PostService {
     @Transactional
     public void updatePost(Long userId, Long postId, PostUpdateRequest req) {
         Post p = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("게시물이 없습니다."));
+                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
         if (!p.getUserId().equals(userId)) {
-            throw new AccessDeniedException("내 글만 수정할 수 있습니다.");
+            throw new ClientException(ResponseCode.FORBIDDEN);
         }
 
         p.setCategory(req.getCategory());
@@ -185,9 +189,9 @@ public class PostService {
     @Transactional
     public void deletePost(Long userId, Long postId) {
         Post p = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("게시물이 없습니다."));
+                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
         if (!p.getUserId().equals(userId)) {
-            throw new AccessDeniedException("내 글만 삭제할 수 있습니다.");
+            throw new ClientException(ResponseCode.FORBIDDEN);
         }
         postRepository.delete(p);
     }

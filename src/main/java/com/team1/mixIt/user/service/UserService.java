@@ -1,7 +1,8 @@
 package com.team1.mixIt.user.service;
 
+import com.team1.mixIt.common.code.ResponseCode;
+import com.team1.mixIt.common.exception.ClientException;
 import com.team1.mixIt.user.entity.User;
-import com.team1.mixIt.user.exception.UserNotFoundException;
 import com.team1.mixIt.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -19,7 +20,7 @@ public class UserService {
 
     public User getUser(String loginId, String pwd, String inputPwd) {
         if (!StringUtils.equals(pwd, inputPwd)) throw new RuntimeException(); // Todo Exception 정의
-        return userRepository.findByLoginId(loginId).orElseThrow(() -> new UserNotFoundException(loginId));
+        return userRepository.findByLoginId(loginId).orElseThrow(() -> new ClientException(ResponseCode.USER_NOT_FOUND));
     }
 
     @Transactional

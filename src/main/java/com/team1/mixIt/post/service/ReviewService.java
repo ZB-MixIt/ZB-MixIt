@@ -1,6 +1,7 @@
 package com.team1.mixIt.post.service;
 
-import com.team1.mixIt.common.dto.ResponseTemplate;
+import com.team1.mixIt.common.code.ResponseCode;
+import com.team1.mixIt.common.exception.ClientException;
 import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.notification.event.NotificationEvent;
@@ -15,8 +16,6 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -34,9 +33,7 @@ public class ReviewService {
     @Transactional
     public ReviewResponse addReview(Long postId, User user, ReviewRequest req) {
         Post post = postRepo.findById(postId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "게시물을 찾을 수 없습니다."
-                ));
+                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
         List<Long> newImageIds = req.getImageIds() != null ? req.getImageIds() : List.of();
         Review review = Review.builder()
                 .user(user)
@@ -68,9 +65,7 @@ public class ReviewService {
     @Transactional
     public ReviewResponse updateReview(Long reviewId, User user, ReviewRequest req) {
         Review review = reviewRepo.findByIdAndUserId(reviewId, user.getId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."
-                ));
+                .orElseThrow(() -> new ClientException(ResponseCode.REVIEW_NOT_FOUND));
 
         review.setContent(req.getContent());
         review.setRate(req.getRate());
@@ -91,9 +86,7 @@ public class ReviewService {
     @Transactional
     public void deleteReview(Long reviewId, User user) {
         Review review = reviewRepo.findByIdAndUserId(reviewId, user.getId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."
-                ));
+                .orElseThrow(() -> new ClientException(ResponseCode.REVIEW_NOT_FOUND));
 
         Post post = review.getPost();
         reviewRepo.delete(review);

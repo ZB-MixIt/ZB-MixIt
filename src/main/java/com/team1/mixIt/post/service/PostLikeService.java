@@ -1,11 +1,9 @@
 package com.team1.mixIt.post.service;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.server.ResponseStatusException;
-
 import com.team1.mixIt.actionlog.entity.ActionLog;
 import com.team1.mixIt.actionlog.repository.ActionLogRepository;
+import com.team1.mixIt.common.code.ResponseCode;
+import com.team1.mixIt.common.exception.ClientException;
 import com.team1.mixIt.notification.event.NotificationEvent;
 import com.team1.mixIt.post.dto.response.LikeResponse;
 import com.team1.mixIt.post.entity.PostLike;
@@ -15,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.PostMapping;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +28,7 @@ public class PostLikeService {
     @Transactional
     public LikeResponse addLike(Long postId, Long userId) {
         var post = postRepository.findById(postId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시물을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
 
         boolean hasLiked = postLikeRepository.findByPostIdAndUserId(postId, userId).isEmpty();
         if (hasLiked) {
@@ -77,7 +76,7 @@ public class PostLikeService {
 
     public LikeResponse status(Long postId, Long userId) {
         if (!postRepository.existsById(postId)) {
-            throw new RuntimeException("존재하지 않는 게시물입니다.");
+            throw new ClientException(ResponseCode.POST_NOT_FOUND);
         }
         boolean hasLiked = postLikeRepository.findByPostIdAndUserId(postId, userId).isPresent();
         long count = postLikeRepository.countByPostId(postId);

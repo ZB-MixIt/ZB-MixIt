@@ -1,14 +1,13 @@
 package com.team1.mixIt.user.service;
 
+import com.team1.mixIt.common.code.ResponseCode;
+import com.team1.mixIt.common.exception.ClientException;
 import com.team1.mixIt.email.service.EmailService;
 import com.team1.mixIt.image.entity.Image;
-import com.team1.mixIt.image.exception.ImageNotFoundException;
-import com.team1.mixIt.image.exception.ImageOwnerAlreadyExistException;
 import com.team1.mixIt.image.repository.ImageRepository;
 import com.team1.mixIt.term.service.UserTermsService;
 import com.team1.mixIt.user.dto.UserCreateDto;
 import com.team1.mixIt.user.entity.User;
-import com.team1.mixIt.user.exception.*;
 import com.team1.mixIt.user.repository.UserRepository;
 import com.team1.mixIt.utils.DateUtils;
 import jakarta.transaction.Transactional;
@@ -40,9 +39,9 @@ public class UserAccountService {
 
     @Transactional
     public User createUser(UserCreateDto dto) {
-        userRepository.findByLoginId(dto.getLoginId()).ifPresent(v -> {throw new DuplicateLoginIdException(dto.getLoginId());});
-        userRepository.findByEmail(dto.getEmail()).ifPresent(v -> {throw new DuplicateEmailException(dto.getEmail());});
-        userRepository.findByNickname(dto.getNickname()).ifPresent(v -> {throw new DuplicateNicknameException(dto.getNickname());});
+        userRepository.findByLoginId(dto.getLoginId()).ifPresent(v -> { throw new ClientException(ResponseCode.DUPLICATE_LOGIN_ID); });
+        userRepository.findByEmail(dto.getEmail()).ifPresent(v -> { throw new ClientException(ResponseCode.DUPLICATE_EMAIL); });
+        userRepository.findByNickname(dto.getNickname()).ifPresent(v -> { throw new ClientException(ResponseCode.DUPLICATE_NICKNAME); });
 
         // emailService.checkIsEmailVerified(dto.getEmail());
         userTermsService.checkRequiredTerms(dto.getTerms());
@@ -57,9 +56,9 @@ public class UserAccountService {
                 .build();
 
         if (Objects.nonNull(dto.getImageId())) {
-            Image image = imageRepository.findById(dto.getImageId()).orElseThrow(ImageNotFoundException::new);
+            Image image = imageRepository.findById(dto.getImageId()).orElseThrow(() -> new ClientException(ResponseCode.IMAGE_NOT_FOUND));
 
-            if (Objects.nonNull(image.getUser())) throw new ImageOwnerAlreadyExistException();
+            if (Objects.nonNull(image.getUser())) throw new ClientException(ResponseCode.IMAGE_OWNER_ALREADY_EXIST);
             user.updateProfileImage(image);
         }
 
@@ -80,17 +79,17 @@ public class UserAccountService {
     public void updatePassword(String loginId, String oldPwd, String newPwd) {
         User user = userRepository.findByLoginId(loginId).orElseThrow();
 
-        if (!passwordEncoder.encode(oldPwd).equals(user.getPassword())) throw new PasswordMismatchException(oldPwd);
+        if (!passwordEncoder.encode(oldPwd).equals(user.getPassword())) throw new ClientException(ResponseCode.PASSWORD_MISMATCH);
 
         user.updatePassword(passwordEncoder.encode(newPwd));
         userRepository.save(user);
     }
 
     public void resetPassword(String loginId, String birth, String email) {
-        User user = userRepository.findByLoginId(loginId).orElseThrow(() -> new UserNotFoundException(loginId));
+        User user = userRepository.findByLoginId(loginId).orElseThrow(() -> new ClientException(ResponseCode.USER_NOT_FOUND));
 
-        if (!DateUtils.yyMMdd(user.getBirthdate()).equals(birth)) throw new UserNotFoundException(birth);
-        if (!user.getEmail().equals(email)) throw new UserNotFoundException(email);
+        if (!DateUtils.yyMMdd(user.getBirthdate()).equals(birth)) throw new ClientException(ResponseCode.USER_NOT_FOUND);
+        if (!user.getEmail().equals(email)) throw new ClientException(ResponseCode.USER_NOT_FOUND);
 
         String newPwd = UUID.randomUUID().toString().substring(0, 8);
 
