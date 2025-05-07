@@ -92,16 +92,9 @@ public class PostController {
     public ResponseTemplate<PostResponse> updatePost(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
-            @RequestPart("dto") String dtoString,
+            @RequestPart("dto") @Valid PostUpdateRequest dto,
             @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) {
-        PostUpdateRequest dto;
-        try {
-            dto = new ObjectMapper().readValue(dtoString, PostUpdateRequest.class);
-        } catch (JsonProcessingException e) {
-            throw new BadRequestException("dto JSON 파싱 실패: " + e.getOriginalMessage());
-        }
-
         List<Long> imageIds = validateAndUploadImages(user, images);
         dto.setImageIds(imageIds);
 
@@ -109,8 +102,6 @@ public class PostController {
         PostResponse response = postService.getPostById(id, user.getId(), imageService);
         return ResponseTemplate.ok(response);
     }
-
-
 
     @Operation(summary = "게시물 삭제", description = "내가 쓴 게시물을 삭제합니다.")
     @ApiResponse(responseCode = "200", description = "삭제 성공")
