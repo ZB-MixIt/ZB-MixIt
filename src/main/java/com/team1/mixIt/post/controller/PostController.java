@@ -1,5 +1,6 @@
 package com.team1.mixIt.post.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.post.dto.request.PostCreateRequest;
 import com.team1.mixIt.post.dto.request.PostUpdateRequest;
@@ -90,13 +91,20 @@ public class PostController {
     public ResponseTemplate<Void> updatePost(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
-            @Valid @RequestPart("dto") PostUpdateRequest dto,
+            @RequestPart("dto") String dtoString,
             @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) {
-        List<Long> imageIds = validateAndUploadImages(user, images);
-        dto.setImageIds(imageIds);
-        postService.updatePost(user.getId(), id, dto);
-        return ResponseTemplate.ok();
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            PostUpdateRequest dto = objectMapper.readValue(dtoString, PostUpdateRequest.class);
+
+            List<Long> imageIds = validateAndUploadImages(user, images);
+            dto.setImageIds(imageIds);
+            postService.updatePost(user.getId(), id, dto);
+            return ResponseTemplate.ok();
+        } catch (Exception e) {
+            throw new BadRequestException("요청 데이터 파싱 실패: " + e.getMessage());
+        }
     }
 
     @Operation(summary = "게시물 삭제", description = "내가 쓴 게시물을 삭제합니다.")
