@@ -13,6 +13,10 @@ import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -21,7 +25,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -32,7 +35,6 @@ import java.util.Objects;
 
 @Validated
 @RestController
-@SecurityRequirement(name = "BearerAuth")
 @RequestMapping(value = "/api/v1/posts", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "게시판 API", description = "게시물 작성/조회/수정/삭제 및 검색페이징 API")
@@ -42,34 +44,76 @@ public class PostController {
     private final PostLikeService likeService;
     private final ImageService imageService;
 
-    // JSON-only 요청 (이미지 없는 경우)
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "게시물 생성",
+            description = """
+        • JSON-only: 이미지 없이 JSON body 로 생성  
+        • multipart/form-data: 이미지 포함/미포함 모두 지원
+        """,
+            requestBody = @RequestBody(
+                    content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = PostCreateRequest.class),
+                                    examples = @ExampleObject(
+                                            name = "JSON-only",
+                                            value = """
+                {
+                  "category":"CAFE",
+                  "title":"제목",
+                  "content":"본문 내용",
+                  "tags":["서브웨이","랜치"],
+                  "imageIds":[]
+                }
+                """
+                                    )
+                            ),
+                            @Content(
+                                    mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                                    schema = @Schema(
+                                            description = "multipart/form-data {\n  dto: JSON,\n  images: [file,...]\n}",
+                                            type = "object"
+                                    ),
+                                    examples = @ExampleObject(
+                                            name = "multipart",
+                                            value = "--boundary\n" +
+                                                    "Content-Disposition: form-data; name=\"dto\"\n" +
+                                                    "Content-Type: application/json\n\n" +
+                                                    "{\"category\":\"CAFE\",\"title\":\"제목\",\"content\":\"본문\",\"tags\":[\"a\",\"b\"]}\n" +
+                                                    "--boundary\n" +
+                                                    "Content-Disposition: form-data; name=\"images\"; filename=\"pic.jpg\"\n" +
+                                                    "Content-Type: image/jpeg\n\n" +
+                                                    "...binary...\n" +
+                                                    "--boundary--"
+                                    )
+                            )
+                    }
+            )
+    )
+    @PostMapping(
+            consumes = {
+                    MediaType.APPLICATION_JSON_VALUE,
+                    MediaType.MULTIPART_FORM_DATA_VALUE
+            }
+    )
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "게시물 생성 (JSON only)", description = "이미지 없이 JSON body로 게시물을 생성합니다.")
-    public ResponseTemplate<Long> createPostJson(
+    public ResponseTemplate<Long> createPost(
             @AuthenticationPrincipal User user,
-            @Valid @RequestBody PostCreateRequest dto
+            @Valid @RequestPart(value = "dto", required = false) PostCreateRequest dtoPart,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            @Valid @RequestBody(required = false) PostCreateRequest dtoJson
     ) {
-        dto.setImageIds(Collections.emptyList());
-        return ResponseTemplate.ok(
-                postService.createPost(user.getId(), dto)
-        );
-    }
+        // multipart/form-data 요청 시 dtoPart, JSON-only 요청 시 dtoJson
+        PostCreateRequest dto = dtoPart != null ? dtoPart : dtoJson;
+        if (dto == null) {
+            throw new BadRequestException("요청 본문이 비어 있습니다.");
+        }
 
-    // multipart/form-data 요청 (이미지 포함 또는 없는 경우)
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "게시물 생성 (multipart)", description = "이미지 포함/미포함 모두 지원하는 multipart/form-data 요청입니다.")
-    public ResponseTemplate<Long> createPostMultipart(
-            @AuthenticationPrincipal User user,
-            @Valid @RequestPart("dto") PostCreateRequest dto,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images
-    ) {
+        // 이미지가 있으면 업로드하고 ID 리스트 생성
         List<Long> imageIds = validateAndUploadImages(user, images);
         dto.setImageIds(imageIds);
-        return ResponseTemplate.ok(
-                postService.createPost(user.getId(), dto)
-        );
+
+        return ResponseTemplate.ok(postService.createPost(user.getId(), dto));
     }
 
     @Operation(summary = "전체 게시물 목록 조회", description = "카테고리, 키워드, 정렬, 페이징 조건으로 조회합니다.")
@@ -101,8 +145,7 @@ public class PostController {
         return ResponseTemplate.ok(dto);
     }
 
-    // 게시물 수정 (multipart/form-data 전용)
-    @Operation(summary = "게시물 수정", description = "이미지 포함/미포함 수정 지원")
+    @Operation(summary = "게시물 수정", description = "이미지 포함/미포함 수정 모두 지원 (multipart/form-data 전용)")
     @ApiResponse(responseCode = "200", description = "수정 성공")
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseTemplate<Void> updatePost(
@@ -117,9 +160,9 @@ public class PostController {
         return ResponseTemplate.ok();
     }
 
-    // 게시물 삭제
-    @DeleteMapping("/{id}")
+    @Operation(summary = "게시물 삭제", description = "내가 쓴 게시물을 삭제합니다.")
     @ApiResponse(responseCode = "200", description = "삭제 성공")
+    @DeleteMapping("/{id}")
     public ResponseTemplate<Void> deletePost(
             @AuthenticationPrincipal User user,
             @PathVariable Long id
@@ -128,7 +171,6 @@ public class PostController {
         return ResponseTemplate.ok();
     }
 
-    // 좋아요 등록/해제
     @Operation(summary = "게시물 좋아요 등록", description = "게시물에 좋아요를 남깁니다.")
     @ApiResponse(responseCode = "201", description = "좋아요 등록 성공")
     @PostMapping("/{postId}/like")
@@ -155,13 +197,13 @@ public class PostController {
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @GetMapping("/{postId}/like")
     public ResponseTemplate<LikeResponse> getLikeStatus(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long postId
+            @PathVariable Long postId,
+            @AuthenticationPrincipal User user
     ) {
         return ResponseTemplate.ok(likeService.status(postId, user.getId()));
     }
 
-    // 공통 이미지 검증 & 업로드 로직
+    //  공통 이미지 검증 & 업로드 로직
     private List<Long> validateAndUploadImages(User user, List<MultipartFile> images) {
         if (images == null || images.isEmpty()) {
             return Collections.emptyList();
@@ -178,7 +220,7 @@ public class PostController {
             String ext = Objects.requireNonNull(file.getOriginalFilename())
                     .substring(file.getOriginalFilename().lastIndexOf('.') + 1)
                     .toLowerCase();
-            if (!List.of("jpg", "jpeg", "png").contains(ext)) {
+            if (!List.of("jpg","jpeg","png").contains(ext)) {
                 throw new BadRequestException("JPG/PNG만 지원합니다.");
             }
             Image img = (user != null && user.getLoginId() != null)
