@@ -4,6 +4,7 @@ import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.post.dto.request.ReviewRequest;
 import com.team1.mixIt.post.dto.response.ReviewResponse;
 import com.team1.mixIt.post.exception.BadRequestException;
+import com.team1.mixIt.post.service.PostService;
 import com.team1.mixIt.post.service.ReviewService;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.image.service.ImageService;
@@ -13,11 +14,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Objects;
@@ -30,6 +33,8 @@ public class ReviewController {
 
     private final ReviewService svc;
     private final ImageService imageService;
+    private final PostService postSvc;
+
 
 
     @Operation(summary = "리뷰 등록 (JSON)", description = "게시물에 이미지 없이 리뷰와 평점을 추가합니다.")
@@ -124,10 +129,17 @@ public class ReviewController {
             @PathVariable Long postId,
             @AuthenticationPrincipal User user
     ) {
-        return ResponseTemplate.ok(
-                svc.listReviews(postId, user.getId())
-        );
+        if (!postSvc.existsById(postId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "게시물 없음"
+            );
+        }
+        Long currentUserId = (user != null) ? user.getId() : null;
+
+        List<ReviewResponse> reviews = svc.listReviews(postId, currentUserId);
+        return ResponseTemplate.ok(reviews);
     }
+
 
     private List<Long> uploadAndGetIds(List<MultipartFile> files, User user) {
         if (files == null) {
