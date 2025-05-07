@@ -51,30 +51,27 @@ public class PostController {
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseTemplate<Long> createPost(
             @AuthenticationPrincipal User user,
-            // multipart/form-data 요청 시 DTO 바인딩
             @Valid @RequestPart(value = "dto", required = false) PostCreateRequest dtoPart,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images,
-            // application/json 요청 시 DTO 바인딩
+            @RequestPart(value = "images", required = false) List<MultipartFile> imagesPart,
             @Valid @RequestBody(required = false) PostCreateRequest dtoJson
     ) {
-        // 실제 사용할 DTO 선택
+        // DTO 선택: multipart/form-data vs. application/json
         PostCreateRequest dto = dtoPart != null ? dtoPart : dtoJson;
         if (dto == null) {
             throw new BadRequestException("요청 본문이 비어 있습니다.");
         }
 
         // 이미지 검증 및 업로드
-        List<Long> imageIds = validateAndUploadImages(user, images);
+        List<Long> imageIds = validateAndUploadImages(user, imagesPart);
         dto.setImageIds(imageIds);
 
-        // 서비스 호출
         return ResponseTemplate.ok(
                 postService.createPost(user.getId(), dto)
         );
     }
 
     /**
-     * 전체 게시물 조회
+     * 전체 게시물 목록 조회
      */
     @Operation(summary = "전체 게시물 목록 조회", description = "카테고리, 키워드, 정렬, 페이징 조건으로 조회합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공")
@@ -120,10 +117,8 @@ public class PostController {
             @Valid @RequestPart("dto") PostUpdateRequest dto,
             @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) {
-        // 이미지 검증 및 업로드
         List<Long> imageIds = validateAndUploadImages(user, images);
         dto.setImageIds(imageIds);
-
         postService.updatePost(user.getId(), id, dto);
         return ResponseTemplate.ok();
     }
@@ -131,8 +126,8 @@ public class PostController {
     /**
      * 게시물 삭제
      */
-    @ApiResponse(responseCode = "200", description = "삭제 성공")
     @DeleteMapping("/{id}")
+    @ApiResponse(responseCode = "200", description = "삭제 성공")
     public ResponseTemplate<Void> deletePost(
             @AuthenticationPrincipal User user,
             @PathVariable Long id
@@ -167,7 +162,7 @@ public class PostController {
     }
 
     /**
-     * 댓글 좋아요 상태 조회
+     * 좋아요 상태 조회
      */
     @Operation(summary = "좋아요 상태 조회", description = "사용자의 좋아요 여부와 좋아요 수를 반환합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공")
