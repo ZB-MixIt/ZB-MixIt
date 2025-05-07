@@ -93,7 +93,7 @@ public class PostController {
             content = @Content(schema = @Schema(implementation = PostResponse.class))
     )
     @PutMapping(
-            value = "/{id}",
+            value = "/{id}/json",
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
