@@ -1,5 +1,6 @@
 package com.team1.mixIt.post.service;
 
+import com.team1.mixIt.actionlog.repository.ActionLogRepository;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.response.HomeFeedResponse;
 import com.team1.mixIt.post.dto.response.PostResponse;
@@ -7,7 +8,7 @@ import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.tag.dto.response.TagStatResponse;
 import com.team1.mixIt.tag.service.TagStatsService;
-import com.team1.mixIt.actionlog.repository.ActionLogRepository;
+import com.team1.mixIt.utils.ImageUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -16,8 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-
-import static com.team1.mixIt.post.service.PostService.DEFAULT_IMAGE_URL;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +43,7 @@ public class HomeFeedService {
         );
 
         return posts.map(p ->
-                PostResponse.fromEntity(p, null, DEFAULT_IMAGE_URL, imageService)
+                PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService)
         );
     }
 
@@ -62,7 +61,7 @@ public class HomeFeedService {
 
         return ids.map(id -> {
             Post p = postRepository.findById(id).orElseThrow();
-            return PostResponse.fromEntity(p, null, DEFAULT_IMAGE_URL, imageService);
+            return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService);
         });
     }
 
@@ -83,7 +82,7 @@ public class HomeFeedService {
                 .map(arr -> {
                     Long id = (Long) arr[0];
                     Post p = postRepository.findById((Long)arr[0]).orElseThrow();
-                    return PostResponse.fromEntity(p, null, DEFAULT_IMAGE_URL, imageService);
+                    return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService);
                 })
                 .toList();
 
@@ -105,7 +104,7 @@ public class HomeFeedService {
 
         return ids.map(id -> {
             Post p = postRepository.findById(id).orElseThrow();
-            return PostResponse.fromEntity(p, null, DEFAULT_IMAGE_URL, imageService);
+            return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService);
         });
     }
 
@@ -121,7 +120,7 @@ public class HomeFeedService {
 
         return ids.map(id -> {
             Post p = postRepository.findById(id).orElseThrow();
-            return PostResponse.fromEntity(p, null, DEFAULT_IMAGE_URL, imageService);
+            return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService);
         });
     }
 

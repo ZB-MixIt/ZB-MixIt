@@ -5,10 +5,9 @@ import com.team1.mixIt.common.exception.ClientException;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import jakarta.persistence.EntityNotFoundException;
 
 
 
@@ -17,16 +16,17 @@ import jakarta.persistence.EntityNotFoundException;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public User getUser(String loginId, String pwd, String inputPwd) {
-        if (!StringUtils.equals(pwd, inputPwd)) throw new RuntimeException(); // Todo Exception 정의
+    public User getMyPage(String loginId, String pwd, String inputPwd) {
+        if (!passwordEncoder.matches(inputPwd, pwd)) throw new ClientException(ResponseCode.PASSWORD_MISMATCH);
         return userRepository.findByLoginId(loginId).orElseThrow(() -> new ClientException(ResponseCode.USER_NOT_FOUND));
     }
 
     @Transactional
     public void updateNotificationSettings(Long userId, boolean eventOn, boolean alertOn) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다. id=" + userId));
+                .orElseThrow(() -> new ClientException(ResponseCode.USER_NOT_FOUND));
 
         user.setNotifyOn(eventOn);
         user.setPushOn(alertOn);

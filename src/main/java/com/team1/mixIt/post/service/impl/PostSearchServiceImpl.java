@@ -1,19 +1,23 @@
 package com.team1.mixIt.post.service.impl;
 
+import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.request.PostSearchRequest;
 import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.post.service.PostSearchService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.*;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
-
+import com.team1.mixIt.utils.ImageUtils;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,7 +26,7 @@ import java.util.List;
 public class PostSearchServiceImpl implements PostSearchService {
 
     private final PostRepository postRepository;
-    private static final String DEFAULT_IMAGE_URL = ""; // TODO: 기본이미주소..
+    private final ImageService imageService;
 
     @Override
     public Page<PostResponse> search(PostSearchRequest req) {
@@ -49,6 +53,6 @@ public class PostSearchServiceImpl implements PostSearchService {
         };
 
         return postRepository.findAll(spec, pageable)
-                .map(p -> PostResponse.fromEntity(p, null, DEFAULT_IMAGE_URL));
+                .map(p -> PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService));
     }
 }
