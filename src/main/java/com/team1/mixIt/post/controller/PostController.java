@@ -1,13 +1,10 @@
 package com.team1.mixIt.post.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.post.dto.request.PostCreateRequest;
 import com.team1.mixIt.post.dto.request.PostUpdateRequest;
 import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.dto.response.LikeResponse;
-import com.team1.mixIt.post.enums.Category;
 import com.team1.mixIt.post.exception.BadRequestException;
 import com.team1.mixIt.post.service.PostLikeService;
 import com.team1.mixIt.post.service.PostService;
@@ -15,10 +12,9 @@ import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.springframework.web.bind.annotation.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -58,17 +54,18 @@ public class PostController {
         return ResponseTemplate.ok(postId);
     }
 
-    // multipart/form-data (이미지 포함/미포함 모두 지원)
-    @Operation(summary = "게시물 생성 (multipart)", description = "이미지 포함/미포함 모두 지원하는 multipart/form-data 요청입니다.")
+    @Operation(summary = "게시물 생성 (multipart)", description = "이미지 포함/미포함 모두 지원합니다.")
+    @Parameter(name = "dto", description = "게시물 텍스트 및 imageIds(JSON)", required = true)
+    @Parameter(name = "newImages", description = "업로드할 이미지 파일들", required = false)
     @ApiResponse(responseCode = "201", description = "생성 성공")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseTemplate<Long> createPostMultipart(
             @AuthenticationPrincipal User user,
             @Valid @RequestPart("dto") PostCreateRequest dto,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images
+            @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages
     ) {
-        List<Long> imageIds = validateAndUploadImages(user, images);
+        List<Long> imageIds = validateAndUploadImages(user, newImages);
         dto.setImageIds(imageIds);
         Long postId = postService.createPost(user.getId(), dto);
         return ResponseTemplate.ok(postId);
@@ -81,26 +78,49 @@ public class PostController {
             @PathVariable Long id,
             @AuthenticationPrincipal User user
     ) {
-                Long currentUserId = user != null ? user.getId() : null;
-                PostResponse dto = postService.getPostById(id, currentUserId, imageService);
-                return ResponseTemplate.ok(dto);
-            }
+        Long currentUserId = user != null ? user.getId() : null;
+        PostResponse dto = postService.getPostById(id, currentUserId, imageService);
+        return ResponseTemplate.ok(dto);
+    }
 
-    @Operation(summary = "게시물 수정", description = "이미지 포함/미포함 모두 지원")
+    @Operation(summary = "게시물 수정", description = "기존 이미지 삭제·신규 이미지 업로드·텍스트 수정 모두 지원")
+    @Parameter(name = "dto", description = "게시물 텍스트 및 남길 imageIds(JSON)", required = true)
+    @Parameter(name = "newImages", description = "업로드할 신규 이미지 파일들", required = false)
+    @Parameter(name = "removeImageIds", description = "삭제할 기존 이미지 ID 목록", required = false)
     @ApiResponse(responseCode = "200", description = "수정 성공", content = @Content(schema = @Schema(implementation = PostResponse.class)))
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseTemplate<PostResponse> updatePost(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
-            @RequestPart("dto") @Valid PostUpdateRequest dto,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images
-    ) {
-        List<Long> imageIds = validateAndUploadImages(user, images);
-        dto.setImageIds(imageIds);
 
+            @Valid @RequestPart("dto") PostUpdateRequest dto,
+
+            @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages,
+
+            @RequestPart(value = "removeImageIds", required = false) List<Long> removeImageIds
+    ) {
+        // 신규 업로드
+        List<Long> uploadedIds = validateAndUploadImages(user, newImages);
+
+        // 남길 기존 IDs 계산
+        List<Long> original = dto.getImageIds() != null
+                ? dto.getImageIds()
+                : Collections.emptyList();
+        List<Long> retained = original.stream()
+                .filter(id0 -> removeImageIds == null || !removeImageIds.contains(id0))
+                .toList();
+
+        // 최종 imageIds = retained + uploaded
+        List<Long> finalImageIds = new ArrayList<>(retained);
+        finalImageIds.addAll(uploadedIds);
+        dto.setImageIds(finalImageIds);
+
+        // 업데이트 로직 실행
         postService.updatePost(user.getId(), id, dto);
-        PostResponse response = postService.getPostById(id, user.getId(), imageService);
-        return ResponseTemplate.ok(response);
+
+        //결과 조회 및 응답
+        PostResponse resp = postService.getPostById(id, user.getId(), imageService);
+        return ResponseTemplate.ok(resp);
     }
 
     @Operation(summary = "게시물 삭제", description = "내가 쓴 게시물을 삭제합니다.")
@@ -163,7 +183,7 @@ public class PostController {
             String ext = Objects.requireNonNull(file.getOriginalFilename())
                     .substring(file.getOriginalFilename().lastIndexOf('.') + 1)
                     .toLowerCase();
-            if (!List.of("jpg","jpeg","png").contains(ext)) {
+            if (!List.of("jpg", "jpeg", "png").contains(ext)) {
                 throw new BadRequestException("JPG/PNG만 지원합니다.");
             }
             Image img = (user != null && user.getLoginId() != null)

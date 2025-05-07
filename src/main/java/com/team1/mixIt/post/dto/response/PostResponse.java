@@ -12,7 +12,9 @@ import lombok.Setter;
 
 import java.util.List;
 
-@Getter @Setter @Builder
+@Getter
+@Setter
+@Builder
 @Schema(description = "게시판 응답 DTO")
 public class PostResponse {
     @Schema(description = "게시물 고유 ID", example = "1")
@@ -30,14 +32,11 @@ public class PostResponse {
     @Schema(description = "게시물 내용", example = "게시물 내용")
     private String content;
 
-    @Schema(description = "첨부 이미지 ID 목록", example = "[1, 2, 3]")
-    private List<Long> imageIds;
-
-    @Schema(description = "첨부 이미지 URL 목록", example = "[\"https://.../img1.jpg\",\"https://.../img2.png\"]")
-    private List<String> imageUrls;
+    @Schema(description = "첨부 이미지 목록", implementation = PostResponse.ImageDto.class)
+    private List<ImageDto> images;
 
     @Schema(description = "대표 이미지 URL (없으면 기본 이미지)", example = "https://../기본이미지.png")
-    private String defaultImageUrl;
+    private String defaultImage;
 
     @Schema(description = "조회수", example = "0")
     private Integer viewCount;
@@ -57,6 +56,20 @@ public class PostResponse {
     @Schema(description = "현재 사용자가 작성자인지 여부", example = "true")
     private Boolean isAuthor;
 
+    @Getter @Setter
+    @Schema(description = "이미지 DTO")
+    public static class ImageDto {
+        @Schema(description = "이미지 고유 ID", example = "1")
+        private Long id;
+
+        @Schema(description = "이미지 URL", example = "https://.../img1.jpg")
+        private String src;
+
+        public ImageDto(Long id, String src) {
+            this.id = id;
+            this.src = src;
+        }
+    }
 
     public static PostResponse fromEntity(
             Post p,
@@ -64,12 +77,12 @@ public class PostResponse {
             String defaultImageUrl,
             ImageService imageService
     ) {
-        List<Long> ids = p.getImageIds();
-        List<String> urls = ids.stream()
+        List<ImageDto> imgDtos = p.getImageIds().stream()
                 .map(imageService::findById)
-                .map(Image::getUrl)
+                .map(img -> new ImageDto(img.getId(), img.getUrl()))
                 .toList();
 
+        String def = imgDtos.isEmpty() ? defaultImageUrl : imgDtos.get(0).getSrc();
         boolean authorFlag = currentUserId != null && p.getUserId().equals(currentUserId);
 
         return PostResponse.builder()
@@ -78,9 +91,8 @@ public class PostResponse {
                 .category(p.getCategory())
                 .title(p.getTitle())
                 .content(p.getContent())
-                .imageIds(ids)
-                .imageUrls(urls)
-                .defaultImageUrl(ids.isEmpty() ? defaultImageUrl : null)
+                .images(imgDtos)
+                .defaultImage(def)
                 .viewCount(p.getViewCount())
                 .bookmarkCount(p.getBookmarkCount())
                 .hasLiked(false)
