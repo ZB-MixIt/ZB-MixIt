@@ -26,6 +26,7 @@ public class HomeFeedService {
     private final ActionLogRepository actionLogRepository;
     private final TagStatsService tagStatsService;
     private final ImageService imageService;
+    private final PostBookmarkService postBookmarkService;
 
 
     //  카테고리별 페이징 조회 (최근 24시간)
@@ -43,7 +44,7 @@ public class HomeFeedService {
         );
 
         return posts.map(p ->
-                PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService)
+                PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService, postBookmarkService)
         );
     }
 
@@ -61,7 +62,7 @@ public class HomeFeedService {
 
         return ids.map(id -> {
             Post p = postRepository.findById(id).orElseThrow();
-            return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService);
+            return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService, postBookmarkService);
         });
     }
 
@@ -82,7 +83,7 @@ public class HomeFeedService {
                 .map(arr -> {
                     Long id = (Long) arr[0];
                     Post p = postRepository.findById((Long)arr[0]).orElseThrow();
-                    return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService);
+                    return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService, postBookmarkService);
                 })
                 .toList();
 
@@ -104,7 +105,7 @@ public class HomeFeedService {
 
         return ids.map(id -> {
             Post p = postRepository.findById(id).orElseThrow();
-            return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService);
+            return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService, postBookmarkService);
         });
     }
 
@@ -120,7 +121,7 @@ public class HomeFeedService {
 
         return ids.map(id -> {
             Post p = postRepository.findById(id).orElseThrow();
-            return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService);
+            return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService, postBookmarkService);
         });
     }
 

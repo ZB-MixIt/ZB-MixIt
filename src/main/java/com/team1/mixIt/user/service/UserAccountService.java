@@ -81,7 +81,7 @@ public class UserAccountService {
     public void updatePassword(String loginId, String oldPwd, String newPwd) {
         User user = userRepository.findByLoginId(loginId).orElseThrow();
 
-        if (!passwordEncoder.encode(oldPwd).equals(user.getPassword())) throw new ClientException(ResponseCode.PASSWORD_MISMATCH);
+        if (!passwordEncoder.matches(oldPwd, user.getPassword())) throw new ClientException(ResponseCode.PASSWORD_MISMATCH);
 
         user.updatePassword(passwordEncoder.encode(newPwd));
         userRepository.save(user);
