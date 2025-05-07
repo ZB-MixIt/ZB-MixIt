@@ -97,7 +97,7 @@ public class PostController {
     }
 
 
-    @PutMapping(value = "/{id}/multipart", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseTemplate<PostResponse> updatePostMultipart(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
