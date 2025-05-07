@@ -19,7 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api/v1/posts/{postId}/like")
 @RequiredArgsConstructor
-@Tag(name = "좋아요 API", description = "게시물 좋아요/상태 조회")
+@Tag(name = "게시물 좋아요 API", description = "게시물 좋아요/상태 조회")
 public class PostLikeController {
 
     private final PostLikeService likeService;
