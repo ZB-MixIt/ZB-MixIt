@@ -88,14 +88,28 @@ public class ReviewController {
             @PathVariable Long reviewId,
             @AuthenticationPrincipal User user,
 
-            @RequestPart("dto") @Valid ReviewRequest req,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images
+            // JSON 바인딩
+            @RequestBody(required = false)
+            @Valid ReviewRequest jsonReq,
+
+            // multipart dto 바인딩
+            @RequestPart(value = "dto", required = false)
+            @Valid ReviewRequest partReq,
+
+            // multipart 로 넘어온 이미지들 (없으면 null)
+            @RequestPart(value = "images", required = false)
+            List<MultipartFile> images
     ) {
+        // JSON multipart 중 어느쪽 결정
+        ReviewRequest req = (jsonReq != null) ? jsonReq : partReq;
+
+        // multipart 인 경우에만 이미지 업로드
         List<Long> newImageIds = uploadAndGetIds(images, user);
         req.setImageIds(newImageIds);
-        return ResponseTemplate.ok(
-                svc.updateReview(reviewId, user, req)
-        );
+
+        //서비스 호출 및 응답
+        ReviewResponse resp = svc.updateReview(reviewId, user, req);
+        return ResponseTemplate.ok(resp);
     }
 
     @Operation(summary = "리뷰 삭제", description = "본인이 작성한 리뷰를 삭제합니다.")
