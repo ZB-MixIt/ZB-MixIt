@@ -84,8 +84,8 @@ public class PostController {
     }
 
     @Operation(
-            summary = "게시물 수정 (JSON only)",
-            description = "기존 이미지 변경 없이, imageIds 배열로만 수정합니다."
+            summary = "게시물 수정",
+            description = "JSON만 수정하거나, 이미지 추가/삭제 + 텍스트·태그 수정 모두 지원합니다."
     )
     @ApiResponse(
             responseCode = "200",
@@ -93,41 +93,26 @@ public class PostController {
             content = @Content(schema = @Schema(implementation = PostResponse.class))
     )
     @PutMapping(
-            value = "/{id}/json",
-            consumes = MediaType.APPLICATION_JSON_VALUE,
+            value = "/{id}",
+            consumes = {
+                    MediaType.APPLICATION_JSON_VALUE,
+                    MediaType.MULTIPART_FORM_DATA_VALUE
+            },
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseTemplate<PostResponse> updatePostJson(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long id,
-            @RequestBody @Valid PostUpdateRequest dto
-    ) {
-        postService.updatePost(user.getId(), id, dto);
-        PostResponse resp = postService.getPostById(id, user.getId(), imageService);
-        return ResponseTemplate.ok(resp);
-    }
-
-
-    @Operation(summary = "게시물 수정", description = "기존 이미지 삭제·신규 이미지 업로드·텍스트 수정 모두 지원")
-    @Parameter(name = "dto", description = "게시물 텍스트 및 남길 imageIds(JSON)", required = true)
-    @Parameter(name = "newImages", description = "업로드할 신규 이미지 파일들", required = false)
-    @Parameter(name = "removeImageIds", description = "삭제할 기존 이미지 ID 목록", required = false)
-    @ApiResponse(responseCode = "200", description = "수정 성공", content = @Content(schema = @Schema(implementation = PostResponse.class)))
-    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseTemplate<PostResponse> updatePost(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
-
-            @Valid @RequestPart("dto") PostUpdateRequest dto,
-
+            // application/json 요청일 땐 body 전체가 이 dto로 바인딩
+            // multipart/form-data 요청일 땐 dto 파트(json)로 바인딩
+            @RequestPart("dto") @Valid PostUpdateRequest dto,
             @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages,
-
             @RequestPart(value = "removeImageIds", required = false) List<Long> removeImageIds
     ) {
         // 신규 업로드
         List<Long> uploadedIds = validateAndUploadImages(user, newImages);
 
-        // 남길 기존 IDs 계산
+        // 기존에 남길 IDs 계산
         List<Long> original = dto.getImageIds() != null
                 ? dto.getImageIds()
                 : Collections.emptyList();
@@ -143,10 +128,13 @@ public class PostController {
         // 업데이트 로직 실행
         postService.updatePost(user.getId(), id, dto);
 
-        //결과 조회 및 응답
+        //결과 조회 후 반환
         PostResponse resp = postService.getPostById(id, user.getId(), imageService);
         return ResponseTemplate.ok(resp);
     }
+
+
+
 
     @Operation(summary = "게시물 삭제", description = "내가 쓴 게시물을 삭제합니다.")
     @ApiResponse(responseCode = "200", description = "삭제 성공")
