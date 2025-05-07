@@ -45,13 +45,9 @@ public class PostLikeService {
                     .actionType("LIKE")
                     .build());
 
-            Long postOwnerId = postRepository.findById(postId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시물을 찾을 수 없습니다."))
-                    .getUserId();
-
             eventPublisher.publishEvent(new NotificationEvent(
                     this,
-                    postOwnerId,
+                    post.getUserId(),
                     "POST_LIKE",
                     postId,
                     "회원님 게시물에 새 좋아요가 달렸습니다."
@@ -61,6 +57,7 @@ public class PostLikeService {
         long count = postLikeRepository.countByPostId(postId);
         return new LikeResponse(hasLiked, count);
     }
+
 
 
     @Transactional
