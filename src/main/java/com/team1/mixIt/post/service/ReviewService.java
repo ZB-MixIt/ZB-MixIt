@@ -29,7 +29,6 @@ public class ReviewService {
     private final ImageService imageService;
     private final ApplicationEventPublisher eventPublisher;
 
-
     @Transactional
     public ReviewResponse addReview(Long postId, User user, ReviewRequest req) {
         Post post = postRepo.findById(postId)
@@ -49,6 +48,7 @@ public class ReviewService {
             imageService.setOwner(images, user);
         }
         recalcAverageRating(post);
+
         Long receiverId = post.getUserId();
         if (!receiverId.equals(user.getId())) {
             eventPublisher.publishEvent(new NotificationEvent(
@@ -59,7 +59,7 @@ public class ReviewService {
                     String.format("%s님이 내 게시물에 댓글을 남겼습니다.", user.getNickname())
             ));
         }
-        return ReviewResponse.fromEntity(review, user.getId());
+        return ReviewResponse.fromEntity(review, user.getId(), imageService);
     }
 
     @Transactional
@@ -80,14 +80,13 @@ public class ReviewService {
         imageService.setOwner(toOwn, user);
 
         recalcAverageRating(review.getPost());
-        return ReviewResponse.fromEntity(review, user.getId());
+        return ReviewResponse.fromEntity(review, user.getId(), imageService);
     }
 
     @Transactional
     public void deleteReview(Long reviewId, User user) {
         Review review = reviewRepo.findByIdAndUserId(reviewId, user.getId())
                 .orElseThrow(() -> new ClientException(ResponseCode.REVIEW_NOT_FOUND));
-
         Post post = review.getPost();
         reviewRepo.delete(review);
         recalcAverageRating(post);
@@ -97,7 +96,7 @@ public class ReviewService {
     public List<ReviewResponse> listReviews(Long postId, Long currentUserId) {
         return reviewRepo.findByPostIdOrderByRateDescCreatedAtDesc(postId)
                 .stream()
-                .map(r -> ReviewResponse.fromEntity(r, currentUserId))
+                .map(r -> ReviewResponse.fromEntity(r, currentUserId, imageService))
                 .toList();
     }
 

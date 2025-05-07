@@ -1,5 +1,6 @@
 package com.team1.mixIt.post.dto.response;
 
+import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.entity.Review;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -36,16 +37,42 @@ public class ReviewResponse {
     @Schema(description = "수정 시각")
     private LocalDateTime modifiedAt;
 
-    @Schema(description = "첨부 이미지 ID 목록")
-    private List<Long> imageIds;
+    @Schema(description = "첨부 이미지 목록", implementation = ImageDto.class)
+    private List<ImageDto> images;
 
     @Schema(description = "현재 사용자가 작성자인지 여부", example = "true")
     private Boolean isAuthor;
 
+    @Getter @Setter
+    @Schema(description = "이미지 DTO")
+    public static class ImageDto {
+        @Schema(description = "이미지 고유 ID", example = "1")
+        private Long id;
 
-    public static ReviewResponse fromEntity(Review r, Long currentUserId) {
-        boolean authorFlag = (currentUserId != null)
+        @Schema(description = "이미지 URL", example = "https://cdn.example.com/img1.png")
+        private String src;
+
+        public ImageDto(Long id, String src) {
+            this.id = id;
+            this.src = src;
+        }
+    }
+
+    public static ReviewResponse fromEntity(
+            Review r,
+            Long currentUserId,
+            ImageService imageService
+    ) {
+        boolean authorFlag = currentUserId != null
                 && r.getUser().getId().equals(currentUserId);
+
+        List<ImageDto> dtoList = r.getImageIds().stream()
+                .map(imageService::findById)
+                .map(img -> new ImageDto(
+                        img.getId(),
+                        img.getUrl()
+                ))
+                .toList();
 
         return ReviewResponse.builder()
                 .id(r.getId())
@@ -55,7 +82,7 @@ public class ReviewResponse {
                 .rate(r.getRate())
                 .createdAt(r.getCreatedAt())
                 .modifiedAt(r.getModifiedAt())
-                .imageIds(r.getImageIds())
+                .images(dtoList)
                 .isAuthor(authorFlag)
                 .build();
     }
