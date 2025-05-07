@@ -83,23 +83,9 @@ public class PostController {
         return ResponseTemplate.ok(dto);
     }
 
-    @Operation(
-            summary = "게시물 수정",
-            description = "JSON만 수정하거나, 이미지 추가/삭제 + 텍스트·태그 수정 모두 지원합니다."
-    )
-    @ApiResponse(
-            responseCode = "200",
-            description = "수정 성공",
-            content = @Content(schema = @Schema(implementation = PostResponse.class))
-    )
-    @PutMapping(
-            value = "/{id}",
-            consumes = {
-                    MediaType.APPLICATION_JSON_VALUE,
-                    MediaType.MULTIPART_FORM_DATA_VALUE
-            },
-            produces = MediaType.APPLICATION_JSON_VALUE
-    )
+    @Operation(summary = "게시물 수정", description = "JSON만 수정하거나, 이미지 추가/삭제 + 텍스트·태그 수정 모두 지원합니다.")
+    @ApiResponse(responseCode = "200", description = "수정 성공", content = @Content(schema = @Schema(implementation = PostResponse.class)))
+    @PutMapping(value = "/{id}", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.MULTIPART_FORM_DATA_VALUE}, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseTemplate<PostResponse> updatePost(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
@@ -132,9 +118,6 @@ public class PostController {
         PostResponse resp = postService.getPostById(id, user.getId(), imageService);
         return ResponseTemplate.ok(resp);
     }
-
-
-
 
     @Operation(summary = "게시물 삭제", description = "내가 쓴 게시물을 삭제합니다.")
     @ApiResponse(responseCode = "200", description = "삭제 성공")
