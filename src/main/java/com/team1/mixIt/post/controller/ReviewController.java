@@ -31,30 +31,6 @@ public class ReviewController {
     private final ReviewService svc;
     private final ImageService imageService;
 
-    private List<Long> uploadAndGetIds(List<MultipartFile> files, User user) {
-        if (files == null) {
-            return List.of();
-        }
-        if (files.size() > 10) {
-            throw new BadRequestException("최대 10장까지 업로드 가능합니다.");
-        }
-        return files.stream().map(file -> {
-            if (file.getSize() > 10 * 1024 * 1024) {
-                throw new BadRequestException("이미지 파일은 10MB 이하만 가능합니다.");
-            }
-            String ext = Objects.requireNonNull(file.getOriginalFilename())
-                    .substring(file.getOriginalFilename().lastIndexOf('.') + 1)
-                    .toLowerCase();
-            if (!List.of("jpg", "jpeg", "png").contains(ext)) {
-                throw new BadRequestException("Jpg/Png만 지원합니다.");
-            }
-            if (user != null && user.getLoginId() != null) {
-                return imageService.create(file, user.getLoginId()).getId();
-            } else {
-                return imageService.create(file).getId();
-            }
-        }).toList();
-    }
 
     @Operation(summary = "리뷰 등록 (JSON)", description = "게시물에 이미지 없이 리뷰와 평점을 추가합니다.")
     @ApiResponses({
@@ -142,5 +118,30 @@ public class ReviewController {
         return ResponseTemplate.ok(
                 svc.listReviews(postId, user.getId())
         );
+    }
+
+    private List<Long> uploadAndGetIds(List<MultipartFile> files, User user) {
+        if (files == null) {
+            return List.of();
+        }
+        if (files.size() > 10) {
+            throw new BadRequestException("최대 10장까지 업로드 가능합니다.");
+        }
+        return files.stream().map(file -> {
+            if (file.getSize() > 10 * 1024 * 1024) {
+                throw new BadRequestException("이미지 파일은 10MB 이하만 가능합니다.");
+            }
+            String ext = Objects.requireNonNull(file.getOriginalFilename())
+                    .substring(file.getOriginalFilename().lastIndexOf('.') + 1)
+                    .toLowerCase();
+            if (!List.of("jpg", "jpeg", "png").contains(ext)) {
+                throw new BadRequestException("Jpg/Png만 지원합니다.");
+            }
+            if (user != null && user.getLoginId() != null) {
+                return imageService.create(file, user.getLoginId()).getId();
+            } else {
+                return imageService.create(file).getId();
+            }
+        }).toList();
     }
 }
