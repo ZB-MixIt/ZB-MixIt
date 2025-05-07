@@ -85,10 +85,20 @@ public class PostController {
                 return ResponseTemplate.ok(dto);
             }
 
-    @Operation(summary = "게시물 수정", description = "이미지 포함/미포함 수정 모두 지원 (multipart/form-data 전용)")
-    @ApiResponse(responseCode = "200", description = "수정 성공", content = @Content(schema = @Schema(implementation = PostResponse.class)))
-    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseTemplate<PostResponse> updatePost(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @Valid @RequestBody PostUpdateRequest dto
+    ) {
+        postService.updatePost(user.getId(), id, dto);
+        PostResponse response = postService.getPostById(id, user.getId(), imageService);
+        return ResponseTemplate.ok(response);
+    }
+
+
+    @PutMapping(value = "/{id}/multipart", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseTemplate<PostResponse> updatePostMultipart(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
             @RequestPart("dto") PostUpdateRequest dto,
@@ -97,10 +107,10 @@ public class PostController {
         List<Long> imageIds = validateAndUploadImages(user, images);
         dto.setImageIds(imageIds);
         postService.updatePost(user.getId(), id, dto);
-
         PostResponse response = postService.getPostById(id, user.getId(), imageService);
         return ResponseTemplate.ok(response);
     }
+
 
 
     @Operation(summary = "게시물 삭제", description = "내가 쓴 게시물을 삭제합니다.")
