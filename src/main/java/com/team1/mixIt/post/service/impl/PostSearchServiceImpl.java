@@ -3,9 +3,11 @@ package com.team1.mixIt.post.service.impl;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.request.PostSearchRequest;
 import com.team1.mixIt.post.dto.response.PostResponse;
+import com.team1.mixIt.post.dto.response.RatingResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.post.service.PostBookmarkService;
+import com.team1.mixIt.post.service.PostRatingService;
 import com.team1.mixIt.post.service.PostSearchService;
 import com.team1.mixIt.utils.ImageUtils;
 import jakarta.persistence.criteria.Join;
@@ -29,6 +31,7 @@ public class PostSearchServiceImpl implements PostSearchService {
     private final PostRepository postRepository;
     private final ImageService imageService;
     private final PostBookmarkService postBookmarkService;
+    private final PostRatingService ratingService;
 
     @Override
     public Page<PostResponse> search(PostSearchRequest req) {
@@ -54,7 +57,16 @@ public class PostSearchServiceImpl implements PostSearchService {
             return cb.and(preds.toArray(new Predicate[0]));
         };
 
+        RatingResponse rating = ratingService.getRatingResponse(p.getId());
+
         return postRepository.findAll(spec, pageable)
-                .map(p -> PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService, postBookmarkService));
+                .map(p -> PostResponse.fromEntity(
+                        p,
+                        null,
+                        ImageUtils.getDefaultImageUrl(),
+                        imageService,
+                        postBookmarkService,
+                        rating
+                ));
     }
 }

@@ -9,6 +9,7 @@ import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.request.PostCreateRequest;
 import com.team1.mixIt.post.dto.request.PostUpdateRequest;
 import com.team1.mixIt.post.dto.response.PostResponse;
+import com.team1.mixIt.post.dto.response.RatingResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.entity.PostHashtag;
 import com.team1.mixIt.post.enums.Category;
@@ -112,8 +113,8 @@ public class PostService {
         long likeCnt = postLikeRepository.countByPostId(postId);
 
         // 평균 별점 참여자 수 조회
-        BigDecimal avg = ratingService.getAverageRate(postId);
-        long count    = ratingService.getRatingCount(postId);
+
+        RatingResponse rating = ratingService.getRatingResponse(p.getId());
 
         PostResponse dto = PostResponse.fromEntity(
                 p,
@@ -121,8 +122,7 @@ public class PostService {
                 DEFAULT_IMAGE_URL,
                 imageService,
                 bookmarkService,
-                avg,
-                count
+                rating
         );
         dto.setHasLiked(hasLiked);
         dto.setLikeCount(likeCnt);
@@ -171,8 +171,7 @@ public class PostService {
                             .isPresent();
                     long cnt = postLikeRepository.countByPostId(p.getId());
 
-                    BigDecimal avg = ratingService.getAverageRate(p.getId());
-                    long count = ratingService.getRatingCount(p.getId());
+                    RatingResponse rating = ratingService.getRatingResponse(p.getId());
 
                     PostResponse dto = PostResponse.fromEntity(
                             p,
@@ -180,8 +179,7 @@ public class PostService {
                             DEFAULT_IMAGE_URL,
                             imageService,
                             postBookmarkService,
-                            avg,
-                            count
+                            rating
                     );
 
                     dto.setHasLiked(liked);
