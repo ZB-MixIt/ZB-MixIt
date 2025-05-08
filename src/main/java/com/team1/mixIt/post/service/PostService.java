@@ -112,7 +112,7 @@ public class PostService {
             );
 
             // 본문 게시물 조회
-            Post p = postRepository.findById(postId)
+            Post p = postRepository.findWithAllById(postId)
                     .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
 
             // 좋아요 여부 카운트
