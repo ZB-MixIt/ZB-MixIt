@@ -12,9 +12,11 @@ import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.dto.response.RatingResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.entity.PostHashtag;
+import com.team1.mixIt.post.entity.PostRating;
 import com.team1.mixIt.post.enums.Category;
 import com.team1.mixIt.post.repository.PostHashtagRepository;
 import com.team1.mixIt.post.repository.PostLikeRepository;
+import com.team1.mixIt.post.repository.PostRatingRepository;
 import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.repository.UserRepository;
@@ -52,6 +54,7 @@ public class PostService {
     private final ActionLogRepository actionLogRepository;
     private final PostBookmarkService postBookmarkService;
     private final PostRatingService ratingService;
+    private final PostRatingRepository postRatingRepository;
 
     @Transactional
     public Long createPost(Long userId, PostCreateRequest req) {
@@ -239,6 +242,38 @@ public class PostService {
 
     public boolean existsById(Long postId) {
         return postRepository.existsById(postId);
+    }
+
+    @Transactional
+    public void addOrUpdateRating(Long postId, Long userId, BigDecimal rate) {
+        // 기존에 평가가 있는지 확인
+        PostRating rating = postRatingRepository.findByPostIdAndUserId(postId, userId)
+                .map(r -> {
+                    r.setRate(rate);  // 기존 평점 수정
+                    return r;
+                })
+                .orElse(PostRating.builder()
+                        .postId(postId)
+                        .userId(userId)
+                        .rate(rate)
+                        .build());  // 새로운 평점 추가
+
+        // 평점 저장
+        postRatingRepository.save(rating);
+
+        // 게시물의 평균 평점 갱신
+        updatePostAvgRating(postId);
+    }
+
+    // 게시물의 평균 평점을 계산하여 갱신하는 메서드
+    private void updatePostAvgRating(Long postId) {
+        // 평점 평균 계산
+        BigDecimal avgRate = postRatingRepository.findAverageRateByPostId(postId);
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+
+        post.setAvgRating(avgRate.doubleValue());  // 평균 평점 업데이트
+        postRepository.save(post);  // 게시물 업데이트
     }
 
 
