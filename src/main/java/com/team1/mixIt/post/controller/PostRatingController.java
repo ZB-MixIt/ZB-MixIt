@@ -38,6 +38,9 @@ public class PostRatingController {
             @AuthenticationPrincipal User user,
             @RequestParam BigDecimal rate
     ) {
+        if (rate == null) {
+            rate = BigDecimal.ZERO;
+        }
         ratingService.addOrUpdateRating(postId, user.getId(), rate);
         return ResponseTemplate.ok();
     }

@@ -20,6 +20,8 @@ public class PostRatingService {
 
     @Transactional
     public void addOrUpdateRating(Long postId, Long userId, BigDecimal rate) {
+        final BigDecimal finalRate = (rate == null) ? BigDecimal.ZERO : rate;
+
         PostRating rating = ratingRepo.findByPostIdAndUserId(postId, userId)
                 .map(r -> {
                     r.setRate(rate);
@@ -34,6 +36,7 @@ public class PostRatingService {
         ratingRepo.save(rating);
         updatePostAvgRating(postId);
     }
+
 
     public BigDecimal getUserRating(Long postId, Long userId) {
         return ratingRepo.findByPostIdAndUserId(postId, userId)
