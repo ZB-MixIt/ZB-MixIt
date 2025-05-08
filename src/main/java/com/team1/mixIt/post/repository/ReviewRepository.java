@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
-    List<Review> findByPostIdOrderByRateDescCreatedAtDesc(Long postId);
+    List<Review> findByPostIdOrderByCreatedAtDesc(Long postId);
     Optional<Review> findByIdAndUserId(Long id, Long userId);
 
     long countByPostId(Long postId);

@@ -89,7 +89,7 @@ public class ReviewService {
 
     @Transactional(Transactional.TxType.SUPPORTS)
     public List<ReviewResponse> listReviews(Long postId, Long currentUserId) {
-        return reviewRepo.findByPostIdOrderByRateDescCreatedAtDesc(postId)
+        return reviewRepo.findByPostIdOrderByCreatedAtDesc(postId)
                 .stream()
                 .map(r -> ReviewResponse.fromEntity(r, currentUserId, imageService))
                 .toList();
