@@ -41,4 +41,7 @@ public class Review extends BaseEntity {
     @Column(name = "like_count", nullable = false)
     @Builder.Default
     private long likeCount = 0L;
+
+    @Column(nullable = false)
+    private BigDecimal rate;
 }
