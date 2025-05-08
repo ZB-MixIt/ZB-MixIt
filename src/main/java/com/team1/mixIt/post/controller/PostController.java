@@ -91,20 +91,15 @@ public class PostController {
             @AuthenticationPrincipal User user
     ) {
         Long currentUserId = user != null ? user.getId() : null;
-        RatingResponse rating = ratingService.getRatingResponse(id);
 
-        Post post = postService.getPostWithUserAndProfile(id);
-
-        PostResponse dto = PostResponse.fromEntity(
-                post,
+        PostResponse dto = postService.getPostById(
+                id,
                 currentUserId,
-                DEFAULT_IMAGE_URL,
                 imageService,
                 bookmarkService,
-                rating
-
-
+                ratingService
         );
+
         return ResponseTemplate.ok(dto);
     }
 
