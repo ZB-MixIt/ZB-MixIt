@@ -43,6 +43,6 @@ public interface PostRepository extends JpaRepository<Post, Long>,
     @EntityGraph(value = "Post.withHashtags", type = EntityGraph.EntityGraphType.LOAD)
     Optional<Post> findById(Long id);
 
-    @Query("SELECT p FROM Post p JOIN FETCH p.user uLEFT JOIN FETCH u.profileImage WHERE p.id = :id")
+    @Query("SELECT p FROM Post p JOIN FETCH p.user u LEFT JOIN FETCH u.profileImage WHERE p.id = :id")
     Optional<Post> findWithUserAndProfileImageById(@Param("id") Long id);
 }
