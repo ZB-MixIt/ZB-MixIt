@@ -1,5 +1,6 @@
 package com.team1.mixIt.post.service;
 
+import com.team1.mixIt.post.dto.response.RatingResponse;
 import com.team1.mixIt.post.entity.PostRating;
 import com.team1.mixIt.post.repository.PostRatingRepository;
 import com.team1.mixIt.post.repository.PostRepository;
@@ -53,5 +54,13 @@ public class PostRatingService {
 
     public long getRatingCount(Long postId) {
         return ratingRepo.countByPostId(postId);
+    }
+
+    @Transactional(readOnly = true)
+    public RatingResponse getRatingResponse(Long postId) {
+        BigDecimal avg = getAverageRate(postId);
+        long count = getRatingCount(postId);
+        return new RatingResponse(avg, count);
+
     }
 }

@@ -4,6 +4,7 @@ import com.team1.mixIt.actionlog.repository.ActionLogRepository;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.response.HomeFeedResponse;
 import com.team1.mixIt.post.dto.response.PostResponse;
+import com.team1.mixIt.post.dto.response.RatingResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.tag.dto.response.TagStatResponse;
@@ -27,6 +28,7 @@ public class HomeFeedService {
     private final TagStatsService tagStatsService;
     private final ImageService imageService;
     private final PostBookmarkService postBookmarkService;
+    private final PostRatingService ratingService;
 
 
     //  카테고리별 페이징 조회 (최근 24시간)
@@ -39,12 +41,17 @@ public class HomeFeedService {
                 (root, query, cb) -> cb.and(
                         cb.equal(root.get("category"), category),
                         cb.greaterThanOrEqualTo(root.get("createdAt"), since)
-                ),
-                pg
+                ), pg
         );
 
         return posts.map(p ->
-                PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService, postBookmarkService)
+                PostResponse.fromEntity(
+                        p,
+                        null,
+                        ImageUtils.getDefaultImageUrl(),
+                        imageService,
+                        postBookmarkService,
+                        null)
         );
     }
 
@@ -62,7 +69,12 @@ public class HomeFeedService {
 
         return ids.map(id -> {
             Post p = postRepository.findById(id).orElseThrow();
-            return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService, postBookmarkService);
+            return PostResponse.fromEntity(p,
+                    null,
+                    ImageUtils.getDefaultImageUrl(),
+                    imageService,
+                    postBookmarkService,
+                    null);
         });
     }
 
@@ -83,7 +95,13 @@ public class HomeFeedService {
                 .map(arr -> {
                     Long id = (Long) arr[0];
                     Post p = postRepository.findById((Long)arr[0]).orElseThrow();
-                    return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService, postBookmarkService);
+                    return PostResponse.fromEntity(
+                            p,
+                            null,
+                            ImageUtils.getDefaultImageUrl(),
+                            imageService,
+                            postBookmarkService,
+                            null);
                 })
                 .toList();
 
@@ -105,7 +123,13 @@ public class HomeFeedService {
 
         return ids.map(id -> {
             Post p = postRepository.findById(id).orElseThrow();
-            return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService, postBookmarkService);
+            return PostResponse.fromEntity(
+                    p,
+                    null,
+                    ImageUtils.getDefaultImageUrl(),
+                    imageService,
+                    postBookmarkService,
+                    null);
         });
     }
 
@@ -121,7 +145,13 @@ public class HomeFeedService {
 
         return ids.map(id -> {
             Post p = postRepository.findById(id).orElseThrow();
-            return PostResponse.fromEntity(p, null, ImageUtils.getDefaultImageUrl(), imageService, postBookmarkService);
+            return PostResponse.fromEntity(
+                    p,
+                    null,
+                    ImageUtils.getDefaultImageUrl(),
+                    imageService,
+                    postBookmarkService,
+                    null);
         });
     }
 

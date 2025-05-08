@@ -5,6 +5,7 @@ import com.team1.mixIt.post.dto.request.PostCreateRequest;
 import com.team1.mixIt.post.dto.request.PostUpdateRequest;
 import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.dto.response.LikeResponse;
+import com.team1.mixIt.post.dto.response.RatingResponse;
 import com.team1.mixIt.post.exception.BadRequestException;
 import com.team1.mixIt.post.service.PostBookmarkService;
 import com.team1.mixIt.post.service.PostLikeService;
@@ -89,9 +90,7 @@ public class PostController {
             @AuthenticationPrincipal User user
     ) {
         Long currentUserId = user != null ? user.getId() : null;
-
-        BigDecimal avgRate = ratingService.getAverageRate(id);
-        long rateCnt = ratingService.getRatingCount(id);
+        RatingResponse rating = ratingService.getRatingResponse(id);
 
         PostResponse dto = PostResponse.fromEntity(
                 postService.getPostEntity(id),
@@ -99,8 +98,8 @@ public class PostController {
                 DEFAULT_IMAGE_URL,
                 imageService,
                 bookmarkService,
-                avgRate,
-                rateCnt
+                rating
+
 
         );
         return ResponseTemplate.ok(dto);

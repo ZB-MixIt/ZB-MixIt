@@ -62,13 +62,8 @@ public class PostResponse {
     @Schema(description = "현재 사용자가 작성자인지 여부", example = "true")
     private Boolean isAuthor;
 
-
-    @Schema(description = "평균 별점", example = "4.3")
-    private BigDecimal averageRating;
-
-    @Schema(description = "별점 참여자 수", example = "12")
-    private long ratingCount;
-
+    @Schema(description = "별점 정보")
+    private RatingResponse rating;
 
     @Getter
     @Setter
@@ -92,8 +87,8 @@ public class PostResponse {
             String defaultImageUrl,
             ImageService imageService,
             PostBookmarkService bookmarkService,
-            BigDecimal averageRating,
-            long ratingCount
+            RatingResponse rating
+
     ) {
         List<ImageDto> imgDtos = p.getImageIds().stream()
                 .map(imageService::findById)
@@ -123,8 +118,7 @@ public class PostResponse {
                 .likeCount(0L)
                 .tags(p.getHashtag().stream().map(PostHashtag::getHashtag).toList())
                 .isAuthor(authorFlag)
-                .averageRating(averageRating)
-                .ratingCount(ratingCount)
+                .rating(rating)
                 .build();
     }
 }
