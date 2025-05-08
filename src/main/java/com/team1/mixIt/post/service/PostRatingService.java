@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -48,7 +49,8 @@ public class PostRatingService {
     }
 
     public BigDecimal getAverageRate(Long postId) {
-        return ratingRepo.findAverageRateByPostId(postId)
+        return Optional.ofNullable(ratingRepo.findAverageRateByPostId(postId))
+                .orElse(BigDecimal.ZERO)
                 .setScale(1, RoundingMode.HALF_UP);
     }
 

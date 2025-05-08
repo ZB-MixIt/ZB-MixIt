@@ -17,6 +17,7 @@ public interface PostRatingRepository extends JpaRepository<PostRating, Long> {
 
     long countByPostId(Long postId);
 
-    @Query("SELECT AVG(r.rate) FROM PostRating r WHERE r.postId = :postId")
+    @Query("SELECT AVG(r.rate) FROM PostRating r WHERE r.postId = :postId AND r.rate > 0")
     BigDecimal findAverageRateByPostId(@Param("postId") Long postId);
+
 }

@@ -24,5 +24,6 @@ public class PostRating {
     private Long userId;
 
     @Column(name = "rate", nullable = false)
-    private BigDecimal rate;
+    @Builder.Default
+    private BigDecimal rate = BigDecimal.ZERO;
 }
