@@ -24,6 +24,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.team1.mixIt.post.service.PostService.DEFAULT_IMAGE_URL;
+
 @Service
 @RequiredArgsConstructor
 public class PostSearchServiceImpl implements PostSearchService {
@@ -57,16 +59,18 @@ public class PostSearchServiceImpl implements PostSearchService {
             return cb.and(preds.toArray(new Predicate[0]));
         };
 
-        RatingResponse rating = ratingService.getRatingResponse(p.getId());
 
         return postRepository.findAll(spec, pageable)
-                .map(p -> PostResponse.fromEntity(
-                        p,
-                        null,
-                        ImageUtils.getDefaultImageUrl(),
-                        imageService,
-                        postBookmarkService,
-                        rating
-                ));
+                .map(p -> {
+                    RatingResponse rating = ratingService.getRatingResponse(p.getId());
+                    return PostResponse.fromEntity(
+                            p,
+                            null,
+                            DEFAULT_IMAGE_URL,
+                            imageService,
+                            postBookmarkService,
+                            rating
+                    );
+                });
     }
 }
