@@ -26,6 +26,9 @@ public class PostResponse {
     @Schema(description = "작성자 ID", example = "1")
     private Long userId;
 
+    @Schema(description = "작성자 프로필 이미지 URL", example = "https://s3.bucket/profile.jpg")
+    private String authorProfileImage;
+
     @Schema(description = "카테고리", example = "카페")
     private Category category;
 
@@ -90,18 +93,29 @@ public class PostResponse {
             RatingResponse rating
 
     ) {
+        // 기존 이미지
         List<ImageDto> imgDtos = p.getImageIds().stream()
                 .map(imageService::findById)
                 .map(img -> new ImageDto(img.getId(), img.getUrl()))
                 .toList();
 
+        // 대표이미지
         String def = imgDtos.isEmpty() ? defaultImageUrl : imgDtos.get(0).getSrc();
+
+        // 작성자 여부, 북마크 여부
         boolean authorFlag = currentUserId != null && p.getUserId().equals(currentUserId);
         boolean bookmarkedFlag = currentUserId != null
                 && bookmarkService.getMyBookmarks(currentUserId, 0, 1, Sort.unsorted())
                 .getContent()
                 .stream()
                 .anyMatch(b -> b.getId().equals(p.getId()));
+
+        //프로필 이미지
+        String profileUrl = null;
+        Long profileImageId = p.getUser().getProfileImageId();
+        if (profileImageId != null) {
+            profileUrl = imageService.findById(profileImageId).getUrl();
+        }
 
         return PostResponse.builder()
                 .id(p.getId())
@@ -119,6 +133,7 @@ public class PostResponse {
                 .tags(p.getHashtag().stream().map(PostHashtag::getHashtag).toList())
                 .isAuthor(authorFlag)
                 .rating(rating)
+                .authorProfileImage(profileUrl)
                 .build();
     }
 }

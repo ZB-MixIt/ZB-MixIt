@@ -93,4 +93,9 @@ public class User extends BaseEntity implements UserDetails  {
     public int hashCode() {
         return id.intValue();
     }
+
+    // 편의상 메서드 추가
+    public Long getProfileImageId() {
+        return profileImage != null ? profileImage.getId() : null;
+    }
 }

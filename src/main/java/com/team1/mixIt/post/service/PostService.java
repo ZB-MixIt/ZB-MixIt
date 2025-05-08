@@ -34,7 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -151,9 +150,17 @@ public class PostService {
         }
     }
 
+    // 기본 조회
     @Transactional(readOnly = true)
     public Post getPostEntity(Long postId) {
         return postRepository.findById(postId)
+                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+    }
+
+    // user + profileimage 동시 조회
+    @Transactional(readOnly = true)
+    public Post findPostWithUser(Long postId) {
+        return postRepository.findWithUserById(postId)
                 .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
     }
 
@@ -294,7 +301,4 @@ public class PostService {
         post.setAvgRating(avgRate.doubleValue());  // 평균 평점 업데이트
         postRepository.save(post);  // 게시물 업데이트
     }
-
-
-
 }
