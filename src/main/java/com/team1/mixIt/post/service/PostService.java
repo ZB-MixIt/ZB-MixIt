@@ -50,6 +50,7 @@ public class PostService {
     private final ReviewService reviewService;
     private final ActionLogRepository actionLogRepository;
     private final PostBookmarkService postBookmarkService;
+    private final PostRatingService ratingService;
 
     @Transactional
     public Long createPost(Long userId, PostCreateRequest req) {
@@ -169,8 +170,19 @@ public class PostService {
                             .findByPostIdAndUserId(p.getId(), currentUserId)
                             .isPresent();
                     long cnt = postLikeRepository.countByPostId(p.getId());
+
+                    BigDecimal avg = ratingService.getAverageRate(p.getId());
+                    long count = ratingService.getRatingCount(p.getId());
+
                     PostResponse dto = PostResponse.fromEntity(
-                            p, currentUserId, DEFAULT_IMAGE_URL, imageService, postBookmarkService);
+                            p,
+                            currentUserId,
+                            DEFAULT_IMAGE_URL,
+                            imageService,
+                            postBookmarkService,
+                            avg,
+                            count
+                    );
 
                     dto.setHasLiked(liked);
                     dto.setLikeCount(cnt);

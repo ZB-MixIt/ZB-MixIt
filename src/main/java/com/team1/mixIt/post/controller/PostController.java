@@ -8,6 +8,7 @@ import com.team1.mixIt.post.dto.response.LikeResponse;
 import com.team1.mixIt.post.exception.BadRequestException;
 import com.team1.mixIt.post.service.PostBookmarkService;
 import com.team1.mixIt.post.service.PostLikeService;
+import com.team1.mixIt.post.service.PostRatingService;
 import com.team1.mixIt.post.service.PostService;
 import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.image.service.ImageService;
@@ -27,6 +28,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -45,6 +47,7 @@ public class PostController {
     private final PostLikeService likeService;
     private final ImageService imageService;
     private final PostBookmarkService bookmarkService;
+    private final PostRatingService ratingService;
 
     @Operation(summary = "게시물 생성 (JSON only)", description = "이미지 없이 JSON body 로 생성합니다.")
     @ApiResponse(responseCode = "201", description = "생성 성공")
@@ -57,6 +60,7 @@ public class PostController {
         Long postId = postService.createPost(user.getId(), dto);
         return ResponseTemplate.ok(postId);
     }
+
 
     @Operation(summary = "게시물 생성 (multipart)", description = "이미지 포함/미포함 모두 지원합니다.")
     @Parameter(name = "dto", description = "게시물 텍스트 및 imageIds(JSON)", required = true)
@@ -75,6 +79,8 @@ public class PostController {
         return ResponseTemplate.ok(postId);
     }
 
+
+
     @Operation(summary = "게시물 상세 조회", description = "게시물을 조회하고 조회수를 증가시킵니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @GetMapping("/{id}")
@@ -83,12 +89,19 @@ public class PostController {
             @AuthenticationPrincipal User user
     ) {
         Long currentUserId = user != null ? user.getId() : null;
+
+        BigDecimal avgRate = ratingService.getAverageRate(id);
+        long rateCnt = ratingService.getRatingCount(id);
+
         PostResponse dto = PostResponse.fromEntity(
                 postService.getPostEntity(id),
                 currentUserId,
                 DEFAULT_IMAGE_URL,
                 imageService,
-                bookmarkService      // 전달
+                bookmarkService,
+                avgRate,
+                rateCnt
+
         );
         return ResponseTemplate.ok(dto);
     }
@@ -132,7 +145,7 @@ public class PostController {
 
         // 업데이트 실행
         postService.updatePost(user.getId(), id, dto);
-        PostResponse resp = postService.getPostById(id, user.getId(), imageService);
+        PostResponse resp = postService.getPostById(id, user.getId(), imageService, bookmarkService, ratingService);
         return ResponseTemplate.ok(resp);
     }
 
