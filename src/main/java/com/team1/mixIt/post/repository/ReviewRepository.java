@@ -24,9 +24,6 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Modifying
     @Query("UPDATE Review r SET r.likeCount = r.likeCount - 1 WHERE r.id = :reviewId AND r.likeCount > 0")
-    void decreaseLikeCount(@Param("reviewId") Long reviewId);
-
-    @Query("SELECT COALESCE(AVG(r.rate), 0) FROM Review r WHERE r.post.id = :postId")
-        BigDecimal findAverageRateByPostId(@Param("postId") Long postId);
+    void decreaseLikeCount(@Param("reviewId") Long  reviewId);
 
 }
