@@ -159,10 +159,12 @@ public class PostService {
 
     // user + profileimage 동시 조회
     @Transactional(readOnly = true)
-    public Post findPostWithUser(Long postId) {
-        return postRepository.findWithUserById(postId)
+    public Post getPostWithUserAndProfile(Long postId) {
+        return postRepository
+                .findWithUserAndProfileImageById(postId)
                 .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
     }
+
 
     @Transactional(readOnly = true)
     public List<PostResponse> getAllPosts(
