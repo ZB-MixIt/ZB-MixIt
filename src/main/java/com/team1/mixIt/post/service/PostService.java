@@ -4,6 +4,7 @@ import com.team1.mixIt.actionlog.entity.ActionLog;
 import com.team1.mixIt.actionlog.repository.ActionLogRepository;
 import com.team1.mixIt.common.code.ResponseCode;
 import com.team1.mixIt.common.exception.ClientException;
+import com.team1.mixIt.common.exception.ServerException;
 import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.request.PostCreateRequest;
@@ -30,6 +31,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -38,6 +40,7 @@ import java.util.List;
 
 import static java.util.Objects.nonNull;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PostService {
@@ -97,39 +100,55 @@ public class PostService {
             PostBookmarkService bookmarkService,
             PostRatingService ratingService
     ) {
-        postRepository.increaseViewCount(postId);
-        actionLogRepository.save(ActionLog.builder()
-                .postId(postId)
-                .userId(currentUserId)
-                .actionType("VIEW")
-                .build()
-        );
+        try {
+            // 조회수 증가
+            postRepository.increaseViewCount(postId);
 
-        // 본문 게시물 조회
-        Post p = postRepository.findById(postId)
-                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+            // 액션 로그 저장
+            actionLogRepository.save(ActionLog.builder()
+                    .postId(postId)
+                    .userId(currentUserId)
+                    .actionType("VIEW")
+                    .build()
+            );
 
-        // 좋아요 여부 카운트
-        boolean hasLiked = postLikeRepository
-                .findByPostIdAndUserId(postId, currentUserId)
-                .isPresent();
-        long likeCnt = postLikeRepository.countByPostId(postId);
+            // 본문 게시물 조회
+            Post p = postRepository.findById(postId)
+                    .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
 
-        // 평균 별점 참여자 수 조회
+            // 좋아요 여부 카운트
+            boolean hasLiked = postLikeRepository
+                    .findByPostIdAndUserId(postId, currentUserId)
+                    .isPresent();
+            long likeCnt = postLikeRepository.countByPostId(postId);
 
-        RatingResponse rating = ratingService.getRatingResponse(p.getId());
+            // 평균 별점 참여자 수 조회
+            RatingResponse rating = ratingService.getRatingResponse(p.getId());
 
-        PostResponse dto = PostResponse.fromEntity(
-                p,
-                currentUserId,
-                DEFAULT_IMAGE_URL,
-                imageService,
-                bookmarkService,
-                rating
-        );
-        dto.setHasLiked(hasLiked);
-        dto.setLikeCount(likeCnt);
-        return dto;
+            // 게시물 응답 DTO 생성
+            PostResponse dto = PostResponse.fromEntity(
+                    p,
+                    currentUserId,
+                    DEFAULT_IMAGE_URL,
+                    imageService,
+                    bookmarkService,
+                    rating
+            );
+
+            // 좋아요 상태 및 수 설정
+            dto.setHasLiked(hasLiked);
+            dto.setLikeCount(likeCnt);
+
+            return dto;
+        } catch (ClientException e) {
+            // 게시물이 없을 경우
+            log.error("Post not found for ID: {}", postId, e);
+            throw new ClientException(ResponseCode.POST_NOT_FOUND);  // 예외를 던져 클라이언트에 알림
+        } catch (Exception e) {
+            // 그 외 다른 예외 처리
+            log.error("Error occurred while retrieving post with ID: {}", postId, e);
+            throw new ServerException(ResponseCode.INTERNAL_SERVER_ERROR, e);  // 서버 오류 처리
+        }
     }
 
     @Transactional(readOnly = true)
