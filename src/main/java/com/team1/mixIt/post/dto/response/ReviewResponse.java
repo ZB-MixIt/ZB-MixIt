@@ -28,9 +28,6 @@ public class ReviewResponse {
     @Schema(description = "리뷰 내용", example = "정말 맛있어요!")
     private String content;
 
-    @Schema(description = "별점", example = "4.5")
-    private BigDecimal rate;
-
     @Schema(description = "작성 시각")
     private LocalDateTime createdAt;
 
@@ -79,7 +76,6 @@ public class ReviewResponse {
                 .userId(r.getUser().getId())
                 .userNickname(r.getUser().getNickname())
                 .content(r.getContent())
-                .rate(r.getRate())
                 .createdAt(r.getCreatedAt())
                 .modifiedAt(r.getModifiedAt())
                 .images(dtoList)
