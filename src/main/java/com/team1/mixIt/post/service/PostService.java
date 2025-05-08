@@ -28,6 +28,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,6 +47,7 @@ public class PostService {
     private final PostHashtagRepository hashtagRepository;
     private final PostLikeRepository postLikeRepository;
     private final ImageService imageService;
+    private final ReviewService reviewService;
     private final ActionLogRepository actionLogRepository;
     private final PostBookmarkService postBookmarkService;
 
@@ -82,7 +85,13 @@ public class PostService {
     }
 
     @Transactional
-    public PostResponse getPostById(Long postId, Long currentUserId, ImageService imageService) {
+    public PostResponse getPostById(
+            Long postId,
+            Long currentUserId,
+            ImageService imageService,
+            PostBookmarkService bookmarkService,
+            PostRatingService ratingService
+    ) {
         postRepository.increaseViewCount(postId);
         actionLogRepository.save(ActionLog.builder()
                 .postId(postId)
@@ -91,15 +100,29 @@ public class PostService {
                 .build()
         );
 
+        // 본문 게시물 조회
         Post p = postRepository.findById(postId)
                 .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
 
+        // 좋아요 여부 카운트
         boolean hasLiked = postLikeRepository
                 .findByPostIdAndUserId(postId, currentUserId)
                 .isPresent();
         long likeCnt = postLikeRepository.countByPostId(postId);
 
-        PostResponse dto = PostResponse.fromEntity(p, currentUserId, DEFAULT_IMAGE_URL, imageService,postBookmarkService);
+        // 평균 별점 참여자 수 조회
+        BigDecimal avg = ratingService.getAverageRate(postId);
+        long count    = ratingService.getRatingCount(postId);
+
+        PostResponse dto = PostResponse.fromEntity(
+                p,
+                currentUserId,
+                DEFAULT_IMAGE_URL,
+                imageService,
+                bookmarkService,
+                avg,
+                count
+        );
         dto.setHasLiked(hasLiked);
         dto.setLikeCount(likeCnt);
         return dto;
@@ -207,4 +230,7 @@ public class PostService {
     public boolean existsById(Long postId) {
         return postRepository.existsById(postId);
     }
+
+
+
 }

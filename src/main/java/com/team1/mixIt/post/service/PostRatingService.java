@@ -1,0 +1,57 @@
+package com.team1.mixIt.post.service;
+
+import com.team1.mixIt.post.entity.PostRating;
+import com.team1.mixIt.post.repository.PostRatingRepository;
+import com.team1.mixIt.post.repository.PostRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
+@Service
+@RequiredArgsConstructor
+public class PostRatingService {
+    private final PostRatingRepository ratingRepo;
+    private final PostRepository postRepo;
+
+    @Transactional
+    public void addOrUpdateRating(Long postId, Long userId, BigDecimal rate) {
+        PostRating rating = ratingRepo.findByPostIdAndUserId(postId, userId)
+                .map(r -> {
+                    r.setRate(rate);
+                    return r;
+                })
+                .orElse(PostRating.builder()
+                        .postId(postId)
+                        .userId(userId)
+                        .rate(rate)
+                        .build());
+
+        ratingRepo.save(rating);
+        updatePostAvgRating(postId);
+    }
+
+    public BigDecimal getUserRating(Long postId, Long userId) {
+        return ratingRepo.findByPostIdAndUserId(postId, userId)
+                .map(PostRating::getRate)
+                .orElse(BigDecimal.ZERO);
+    }
+
+    private void updatePostAvgRating(Long postId) {
+        BigDecimal avg = ratingRepo.findAverageRateByPostId(postId);
+        postRepo.findById(postId).ifPresent(post -> {
+            post.setAvgRating(avg.doubleValue());
+        });
+    }
+
+    public BigDecimal getAverageRate(Long postId) {
+        return ratingRepo.findAverageRateByPostId(postId)
+                .setScale(1, RoundingMode.HALF_UP);
+    }
+
+    public long getRatingCount(Long postId) {
+        return ratingRepo.countByPostId(postId);
+    }
+}

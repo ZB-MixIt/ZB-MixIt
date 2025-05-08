@@ -1,6 +1,7 @@
 package com.team1.mixIt.post.dto.response;
 
 import com.team1.mixIt.image.entity.Image;
+import java.math.BigDecimal;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.entity.PostHashtag;
@@ -61,6 +62,14 @@ public class PostResponse {
     @Schema(description = "현재 사용자가 작성자인지 여부", example = "true")
     private Boolean isAuthor;
 
+
+    @Schema(description = "평균 별점", example = "4.3")
+    private BigDecimal averageRating;
+
+    @Schema(description = "별점 참여자 수", example = "12")
+    private long ratingCount;
+
+
     @Getter
     @Setter
     @Schema(description = "이미지 DTO")
@@ -82,7 +91,9 @@ public class PostResponse {
             Long currentUserId,
             String defaultImageUrl,
             ImageService imageService,
-            PostBookmarkService bookmarkService
+            PostBookmarkService bookmarkService,
+            BigDecimal averageRating,
+            long ratingCount
     ) {
         List<ImageDto> imgDtos = p.getImageIds().stream()
                 .map(imageService::findById)
@@ -112,6 +123,8 @@ public class PostResponse {
                 .likeCount(0L)
                 .tags(p.getHashtag().stream().map(PostHashtag::getHashtag).toList())
                 .isAuthor(authorFlag)
+                .averageRating(averageRating)
+                .ratingCount(ratingCount)
                 .build();
     }
 }

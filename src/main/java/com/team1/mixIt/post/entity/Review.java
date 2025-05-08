@@ -33,9 +33,6 @@ public class Review extends BaseEntity {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @Column(nullable = false, precision = 3, scale = 1)
-    private BigDecimal rate;
-
     @Convert(converter = ImageIdListConverter.class)
     @Column(name = "image_ids", columnDefinition = "JSON")
     @Builder.Default

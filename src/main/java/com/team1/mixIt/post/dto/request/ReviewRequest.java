@@ -20,10 +20,5 @@ public class ReviewRequest {
     @NoPersonalInfo(message = "개인정보가 포함되어 있어요")
     private String content;
 
-    @NotNull
-    @DecimalMin("1.0")
-    @DecimalMax("5.0")
-    private BigDecimal rate;
-
     private List<@Size(max = 10, message = "이미지 ID는 최대 10개까지 등록될 수 있습니다.") Long> imageIds;
 }

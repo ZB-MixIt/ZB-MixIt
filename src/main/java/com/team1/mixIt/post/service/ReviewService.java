@@ -38,7 +38,6 @@ public class ReviewService {
                 .user(user)
                 .post(post)
                 .content(req.getContent())
-                .rate(req.getRate())
                 .imageIds(newImageIds)
                 .build();
         review = reviewRepo.save(review);
@@ -47,7 +46,6 @@ public class ReviewService {
             List<Image> images = imageService.findAllById(newImageIds);
             imageService.setOwner(images, user);
         }
-        recalcAverageRating(post);
 
         Long receiverId = post.getUserId();
         if (!receiverId.equals(user.getId())) {
@@ -68,7 +66,6 @@ public class ReviewService {
                 .orElseThrow(() -> new ClientException(ResponseCode.REVIEW_NOT_FOUND));
 
         review.setContent(req.getContent());
-        review.setRate(req.getRate());
 
         List<Long> originalIds = review.getImageIds();
         List<Long> newImageIds = req.getImageIds() != null ? req.getImageIds() : List.of();
@@ -79,7 +76,6 @@ public class ReviewService {
         List<Image> toOwn = imageService.findAllById(newImageIds);
         imageService.setOwner(toOwn, user);
 
-        recalcAverageRating(review.getPost());
         return ReviewResponse.fromEntity(review, user.getId(), imageService);
     }
 
@@ -89,7 +85,6 @@ public class ReviewService {
                 .orElseThrow(() -> new ClientException(ResponseCode.REVIEW_NOT_FOUND));
         Post post = review.getPost();
         reviewRepo.delete(review);
-        recalcAverageRating(post);
     }
 
     @Transactional(Transactional.TxType.SUPPORTS)
@@ -98,13 +93,6 @@ public class ReviewService {
                 .stream()
                 .map(r -> ReviewResponse.fromEntity(r, currentUserId, imageService))
                 .toList();
-    }
-
-    @Transactional
-    public void recalcAverageRating(Post post) {
-        BigDecimal avg = reviewRepo.findAverageRateByPostId(post.getId())
-                .setScale(1, RoundingMode.HALF_UP);
-        post.setAvgRating(avg.doubleValue());
     }
 
     public boolean existsByIdAndPostId(Long reviewId, Long postId) {
