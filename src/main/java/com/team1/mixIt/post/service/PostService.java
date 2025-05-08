@@ -100,10 +100,10 @@ public class PostService {
             PostRatingService ratingService
     ) {
         try {
-            // 조회수 증가
+            // 1) 조회수 증가 (트랜잭션 내에서 실행)
             postRepository.increaseViewCount(postId);
 
-            // 액션 로그 저장
+            // 2) 액션 로그 저장
             actionLogRepository.save(ActionLog.builder()
                     .postId(postId)
                     .userId(currentUserId)
@@ -111,20 +111,20 @@ public class PostService {
                     .build()
             );
 
-            // 본문 게시물 조회
+            // 3) 연관관계(작성자, 프로필 이미지, 해시태그) 전부 Fetch Join 으로 한 방에 가져오기
             Post p = postRepository.findWithAllById(postId)
                     .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
 
-            // 좋아요 여부 카운트
+            // 4) 좋아요 여부 & 수
             boolean hasLiked = postLikeRepository
                     .findByPostIdAndUserId(postId, currentUserId)
                     .isPresent();
             long likeCnt = postLikeRepository.countByPostId(postId);
 
-            // 평균 별점 참여자 수 조회
-            RatingResponse rating = ratingService.getRatingResponse(p.getId());
+            // 5) 별점 정보
+            RatingResponse rating = ratingService.getRatingResponse(postId);
 
-            // 게시물 응답 DTO 생성
+            // 6) DTO 변환 (이때 p.getUser(), p.getUser().getProfileImage(), p.getHashtag() 모두 이미 초기화된 상태)
             PostResponse dto = PostResponse.fromEntity(
                     p,
                     currentUserId,
@@ -133,20 +133,17 @@ public class PostService {
                     bookmarkService,
                     rating
             );
-
-            // 좋아요 상태 및 수 설정
             dto.setHasLiked(hasLiked);
             dto.setLikeCount(likeCnt);
 
             return dto;
+
         } catch (ClientException e) {
-            // 게시물이 없을 경우
-            log.error("Post not found for ID: {}", postId, e);
-            throw new ClientException(ResponseCode.POST_NOT_FOUND);  // 예외를 던져 클라이언트에 알림
+            log.error("ID {} 게시물을 찾을 수 없습니다.", postId, e);
+            throw new ClientException(ResponseCode.POST_NOT_FOUND);
         } catch (Exception e) {
-            // 그 외 다른 예외 처리
-            log.error("Error occurred while retrieving post with ID: {}", postId, e);
-            throw new ServerException(ResponseCode.INTERNAL_SERVER_ERROR, e);  // 서버 오류 처리
+            log.error("게시물 ID {} 조회 중 오류가 발생했습니다.", postId, e);
+            throw new ServerException(ResponseCode.INTERNAL_SERVER_ERROR, e);
         }
     }
 
