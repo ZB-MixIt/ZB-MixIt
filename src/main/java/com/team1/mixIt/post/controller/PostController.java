@@ -138,7 +138,7 @@ public class PostController {
             @RequestPart(value = "newImages",     required = false) List<MultipartFile> newImages,
             @RequestPart(value = "removeImageIds", required = false) List<Long> removeImageIds
     ) throws IOException {
-        // 1. JSON 문자열을 객체로 역직렬화
+        // JSON 문자열을 객체로 역직렬화
         PostUpdateRequest req = objectMapper.readValue(dtoJson, PostUpdateRequest.class);
 
         // 새로 업로드된 이미지 처리

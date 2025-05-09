@@ -25,6 +25,7 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,7 +33,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -62,21 +62,12 @@ public class PostService {
         Category cat = req.getCategory();
         List<Long> imageIds = nonNull(req.getImageIds()) ? req.getImageIds() : List.of();
 
-        Post post = Post.builder()
-                .userId(userId)
-                .category(cat)
-                .title(req.getTitle())
-                .content(req.getContent())
-                .imageIds(imageIds)
-                .build();
+        Post post = Post.builder().userId(userId).category(cat).title(req.getTitle()).content(req.getContent()).imageIds(imageIds).build();
         post = postRepository.save(post);
 
         // 해시태그 저장
         for (String tag : req.getTags()) {
-            PostHashtag ph = PostHashtag.builder()
-                    .post(post)
-                    .hashtag(tag)
-                    .build();
+            PostHashtag ph = PostHashtag.builder().post(post).hashtag(tag).build();
             hashtagRepository.save(ph);
             post.getHashtag().add(ph);
         }
@@ -91,48 +82,26 @@ public class PostService {
     }
 
     @Transactional
-    public PostResponse getPostById(
-            Long postId,
-            Long currentUserId,
-            ImageService imageService,
-            PostBookmarkService bookmarkService,
-            PostRatingService ratingService,
-            String defaultImageUrl
-    ) {
+    public PostResponse getPostById(Long postId, Long currentUserId, ImageService imageService, PostBookmarkService bookmarkService, PostRatingService ratingService, String defaultImageUrl) {
         try {
             // 조회수 증가
             postRepository.increaseViewCount(postId);
 
             // 액션 로그 저장
-            actionLogRepository.save(ActionLog.builder()
-                    .postId(postId)
-                    .userId(currentUserId)
-                    .actionType("VIEW")
-                    .build()
-            );
+            actionLogRepository.save(ActionLog.builder().postId(postId).userId(currentUserId).actionType("VIEW").build());
 
             // 연관관계(작성자, 프로필 이미지, 해시태그) 전부 Fetch Join 으로 한 방에 가져오기
-            Post p = postRepository.findWithAllById(postId)
-                    .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+            Post p = postRepository.findWithAllById(postId).orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
 
             // 좋아요 여부 수
-            boolean hasLiked = postLikeRepository
-                    .findByPostIdAndUserId(postId, currentUserId)
-                    .isPresent();
+            boolean hasLiked = postLikeRepository.findByPostIdAndUserId(postId, currentUserId).isPresent();
             long likeCnt = postLikeRepository.countByPostId(postId);
 
             // 별점 정보
             RatingResponse rating = ratingService.getRatingResponse(postId);
 
             // DTO 변환
-            PostResponse dto = PostResponse.fromEntity(
-                    p,
-                    currentUserId,
-                    defaultImageUrl,
-                    imageService,
-                    bookmarkService,
-                    rating
-            );
+            PostResponse dto = PostResponse.fromEntity(p, currentUserId, defaultImageUrl, imageService, bookmarkService, rating);
             dto.setHasLiked(hasLiked);
             dto.setLikeCount(likeCnt);
 
@@ -150,31 +119,19 @@ public class PostService {
     // 기본 조회
     @Transactional(readOnly = true)
     public Post getPostEntity(Long postId) {
-        return postRepository.findById(postId)
-                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+        return postRepository.findById(postId).orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
     }
 
     // user + profileimage 동시 조회
     @Transactional(readOnly = true)
     public Post getPostWithUserAndProfile(Long postId) {
-        return postRepository
-                .findWithUserAndProfileImageById(postId)
-                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+        return postRepository.findWithUserAndProfileImageById(postId).orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
     }
 
 
     @Transactional(readOnly = true)
-    public List<PostResponse> getAllPosts(
-            Long currentUserId,
-            Category category,
-            String keyword,
-            String sortBy,
-            String sortDir,
-            int page,
-            int size
-    ) {
-        Pageable pg = PageRequest.of(page, size,
-                Sort.by(Sort.Direction.fromString(sortDir), sortBy));
+    public List<PostResponse> getAllPosts(Long currentUserId, Category category, String keyword, String sortBy, String sortDir, int page, int size) {
+        Pageable pg = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(sortDir), sortBy));
 
         Page<Post> posts = postRepository.findAll((root, query, cb) -> {
             List<Predicate> preds = new ArrayList<>();
@@ -192,36 +149,23 @@ public class PostService {
             return cb.and(preds.toArray(new Predicate[0]));
         }, pg);
 
-        return posts.stream()
-                .map(p -> {
-                    boolean liked = postLikeRepository
-                            .findByPostIdAndUserId(p.getId(), currentUserId)
-                            .isPresent();
-                    long cnt = postLikeRepository.countByPostId(p.getId());
+        return posts.stream().map(p -> {
+            boolean liked = postLikeRepository.findByPostIdAndUserId(p.getId(), currentUserId).isPresent();
+            long cnt = postLikeRepository.countByPostId(p.getId());
 
-                    RatingResponse rating = ratingService.getRatingResponse(p.getId());
+            RatingResponse rating = ratingService.getRatingResponse(p.getId());
+            PostResponse dto = PostResponse.fromEntity(p, currentUserId, defaultImageUrl, imageService, postBookmarkService, rating);
 
-                    PostResponse dto = PostResponse.fromEntity(
-                            p,
-                            currentUserId,
-                            defaultImageUrl,
-                            imageService,
-                            postBookmarkService,
-                            rating
-                    );
-
-                    dto.setHasLiked(liked);
-                    dto.setLikeCount(cnt);
-                    return dto;
-                })
-                .toList();
+            dto.setHasLiked(liked);
+            dto.setLikeCount(cnt);
+            return dto;
+        }).toList();
     }
 
 
     @Transactional
     public void updatePost(Long userId, Long postId, PostUpdateRequest req) {
-        Post p = postRepository.findById(postId)
-                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+        Post p = postRepository.findById(postId).orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
         if (!p.getUserId().equals(userId)) {
             throw new ClientException(ResponseCode.FORBIDDEN);
         }
@@ -239,10 +183,7 @@ public class PostService {
         p.getHashtag().clear();
         if (nonNull(req.getTags())) {
             for (String tag : req.getTags()) {
-                PostHashtag ph = PostHashtag.builder()
-                        .post(p)
-                        .hashtag(tag)
-                        .build();
+                PostHashtag ph = PostHashtag.builder().post(p).hashtag(tag).build();
                 hashtagRepository.save(ph);
                 p.getHashtag().add(ph);
             }
@@ -257,8 +198,7 @@ public class PostService {
 
     @Transactional
     public void deletePost(Long userId, Long postId) {
-        Post p = postRepository.findById(postId)
-                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+        Post p = postRepository.findById(postId).orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
         if (!p.getUserId().equals(userId)) {
             throw new ClientException(ResponseCode.FORBIDDEN);
         }
@@ -272,16 +212,10 @@ public class PostService {
     @Transactional
     public void addOrUpdateRating(Long postId, Long userId, BigDecimal rate) {
         // 기존에 평가가 있는지 확인
-        PostRating rating = postRatingRepository.findByPostIdAndUserId(postId, userId)
-                .map(r -> {
-                    r.setRate(rate);  // 기존 평점 수정
-                    return r;
-                })
-                .orElse(PostRating.builder()
-                        .postId(postId)
-                        .userId(userId)
-                        .rate(rate)
-                        .build());  // 새로운 평점 추가
+        PostRating rating = postRatingRepository.findByPostIdAndUserId(postId, userId).map(r -> {
+            r.setRate(rate);  // 기존 평점 수정
+            return r;
+        }).orElse(PostRating.builder().postId(postId).userId(userId).rate(rate).build());  // 새로운 평점 추가
 
         // 평점 저장
         postRatingRepository.save(rating);
@@ -294,8 +228,7 @@ public class PostService {
     private void updatePostAvgRating(Long postId) {
         // 평점 평균 계산
         BigDecimal avgRate = postRatingRepository.findAverageRateByPostId(postId);
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+        Post post = postRepository.findById(postId).orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
 
         post.setAvgRating(avgRate.doubleValue());  // 평균 평점 업데이트
         postRepository.save(post);  // 게시물 업데이트
