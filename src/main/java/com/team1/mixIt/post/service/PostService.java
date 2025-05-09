@@ -165,7 +165,8 @@ public class PostService {
 
     @Transactional
     public void updatePost(Long userId, Long postId, PostUpdateRequest req) {
-        Post p = postRepository.findById(postId).orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+        Post p = postRepository.findById(postId)
+                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
         if (!p.getUserId().equals(userId)) {
             throw new ClientException(ResponseCode.FORBIDDEN);
         }
@@ -179,22 +180,11 @@ public class PostService {
         imageService.updateAssignedImages(orig, updated);
         p.setImageIds(updated);
 
-        hashtagRepository.deleteByPost(p);
-        p.getHashtag().clear();
-        if (nonNull(req.getTags())) {
-            for (String tag : req.getTags()) {
-                PostHashtag ph = PostHashtag.builder().post(p).hashtag(tag).build();
-                hashtagRepository.save(ph);
-                p.getHashtag().add(ph);
-            }
-        }
+        applyHashtags(p, req.getTags() == null ? List.of() : req.getTags());
 
-        if (!updated.isEmpty()) {
-            List<Image> imgs = imageService.findAllById(updated);
-            User u = userRepository.getReferenceById(userId);
-            imageService.setOwner(imgs, u);
-        }
+        assignImagesToUser(p.getImageIds(), userId);
     }
+
 
     @Transactional
     public void deletePost(Long userId, Long postId) {
@@ -232,5 +222,30 @@ public class PostService {
 
         post.setAvgRating(avgRate.doubleValue());  // 평균 평점 업데이트
         postRepository.save(post);  // 게시물 업데이트
+    }
+
+    private void applyHashtags(Post post, List<String> tags) {
+        hashtagRepository.deleteByPost(post);
+        post.getHashtag().clear();
+
+        tags.stream()
+                .filter(tag -> tag != null && !tag.isBlank())
+                .map(String::trim)
+                .distinct()
+                .forEach(tag -> {
+                    PostHashtag ph = PostHashtag.builder()
+                            .post(post)
+                            .hashtag(tag)
+                            .build();
+                    hashtagRepository.save(ph);
+                    post.getHashtag().add(ph);
+                });
+    }
+
+    private void assignImagesToUser(List<Long> imageIds, Long userId) {
+        if (imageIds == null || imageIds.isEmpty()) return;
+        List<Image> imgs = imageService.findAllById(imageIds);
+        User u = userRepository.getReferenceById(userId);
+        imageService.setOwner(imgs, u);
     }
 }
