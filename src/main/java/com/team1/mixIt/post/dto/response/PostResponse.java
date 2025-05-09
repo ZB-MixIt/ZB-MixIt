@@ -1,7 +1,5 @@
 package com.team1.mixIt.post.dto.response;
 
-import com.team1.mixIt.image.entity.Image;
-import java.math.BigDecimal;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.entity.PostHashtag;
@@ -100,7 +98,7 @@ public class PostResponse {
                 .toList();
 
         // 대표이미지
-        String def = imgDtos.isEmpty() ? defaultImageUrl : imgDtos.get(0).getSrc();
+        String def = imgDtos.isEmpty() ? defaultImageUrl : null;
 
         // 작성자 여부, 북마크 여부
         boolean authorFlag = currentUserId != null && p.getUserId().equals(currentUserId);
