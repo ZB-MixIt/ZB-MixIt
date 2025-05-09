@@ -1,5 +1,7 @@
 package com.team1.mixIt.post.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.image.service.ImageService;
@@ -40,11 +42,14 @@ import java.util.Objects;
 public class PostController {
     @Value("${mixit.default-image-url}")
     private String defaultImageUrl;
+
     private final PostService postService;
     private final PostLikeService likeService;
     private final ImageService imageService;
     private final PostBookmarkService bookmarkService;
     private final PostRatingService ratingService;
+    private final ObjectMapper objectMapper;
+
 
     @Operation(summary = "게시물 생성 (JSON only)", description = "이미지 없이 JSON body 로 생성합니다.")
     @ApiResponse(responseCode = "201", description = "생성 성공")
@@ -60,19 +65,22 @@ public class PostController {
 
 
     @Operation(summary = "게시물 생성 (multipart)", description = "이미지 포함/미포함 모두 지원합니다.")
-    @ApiResponse(responseCode = "201", description = "생성 성공")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseTemplate<Long> createPostMultipart(
             @AuthenticationPrincipal User user,
-            @Valid @RequestPart("dto") PostCreateRequest dto,
+            @RequestPart("dto") String dtoJson,
             @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages
-    ) {
+    ) throws JsonProcessingException {
+        PostCreateRequest dto = objectMapper.readValue(dtoJson, PostCreateRequest.class);
+
         List<Long> imageIds = validateAndUploadImages(user, newImages);
         dto.setImageIds(imageIds);
+
         Long postId = postService.createPost(user.getId(), dto);
         return ResponseTemplate.ok(postId);
     }
+
 
 
 
@@ -145,8 +153,7 @@ public class PostController {
                 defaultImageUrl
         );
         return ResponseTemplate.ok(resp);
-    }
-
+}
     @Operation(summary = "게시물 삭제", description = "내가 쓴 게시물을 삭제합니다.")
     @ApiResponse(responseCode = "200", description = "삭제 성공")
     @DeleteMapping("/{id}")
