@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,13 +31,11 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-import static com.team1.mixIt.post.service.PostService.DEFAULT_IMAGE_URL;
 
 @Validated
 @RestController
@@ -44,7 +43,8 @@ import static com.team1.mixIt.post.service.PostService.DEFAULT_IMAGE_URL;
 @RequiredArgsConstructor
 @Tag(name = "게시판 API", description = "게시물 작성/조회/수정/삭제 및 검색페이징 API")
 public class PostController {
-
+    @Value("${mixit.default-image-url}")
+    private String defaultImageUrl;
     private final PostService postService;
     private final PostLikeService likeService;
     private final ImageService imageService;
@@ -97,7 +97,8 @@ public class PostController {
                 currentUserId,
                 imageService,
                 bookmarkService,
-                ratingService
+                ratingService,
+                defaultImageUrl
         );
 
         return ResponseTemplate.ok(dto);
@@ -114,48 +115,39 @@ public class PostController {
     public ResponseTemplate<PostResponse> updatePost(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
-
-            // JSON-only 요청일 땐 여기에 바인딩
             @RequestBody(required = false) @Valid PostUpdateRequest jsonDto,
-
-            // multipart/form-data 요청일 땐 여기에 바인딩
             @RequestPart(value = "dto", required = false) @Valid PostUpdateRequest partDto,
-
             @RequestPart(value = "newImages",     required = false) List<MultipartFile> newImages,
             @RequestPart(value = "removeImageIds", required = false) List<Long> removeImageIds
     ) {
-        // 어떤 DTO
+        // DTO 결정
         PostUpdateRequest dto = (jsonDto != null) ? jsonDto : partDto;
 
-        // multipart 로 온 경우만 이미지 처리
+        // 멀티파트 이미지 업로드/검증
         List<Long> uploaded = validateAndUploadImages(user, newImages);
-        List<Long> original = dto.getImageIds() != null
-                ? dto.getImageIds()
-                : Collections.emptyList();
+        List<Long> original = dto.getImageIds() != null ? dto.getImageIds() : Collections.emptyList();
         List<Long> retained = original.stream()
                 .filter(id0 -> removeImageIds == null || !removeImageIds.contains(id0))
                 .toList();
-
         List<Long> finalImageIds = new ArrayList<>(retained);
         finalImageIds.addAll(uploaded);
         dto.setImageIds(finalImageIds);
 
-        // 업데이트 실행
+        // 실제 업데이트
         postService.updatePost(user.getId(), id, dto);
-        PostResponse resp = postService.getPostById(id, user.getId(), imageService, bookmarkService, ratingService);
+
+        // 업데이트된 게시물 조회
+        PostResponse resp = postService.getPostById(
+                id,
+                user.getId(),
+                imageService,
+                bookmarkService,
+                ratingService,
+                defaultImageUrl
+        );
         return ResponseTemplate.ok(resp);
     }
 
-    @Operation(summary = "게시물 삭제", description = "내가 쓴 게시물을 삭제합니다.")
-    @ApiResponse(responseCode = "200", description = "삭제 성공")
-    @DeleteMapping("/{id}")
-    public ResponseTemplate<Void> deletePost(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long id
-    ) {
-        postService.deletePost(user.getId(), id);
-        return ResponseTemplate.ok();
-    }
 
     @Operation(summary = "게시물 좋아요 등록", description = "게시물에 좋아요를 남깁니다.")
     @ApiResponse(responseCode = "201", description = "좋아요 등록 성공")

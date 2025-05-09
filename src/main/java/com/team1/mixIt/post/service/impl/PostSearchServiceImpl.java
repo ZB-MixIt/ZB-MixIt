@@ -14,6 +14,7 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,12 +25,12 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.team1.mixIt.post.service.PostService.DEFAULT_IMAGE_URL;
 
 @Service
 @RequiredArgsConstructor
 public class PostSearchServiceImpl implements PostSearchService {
-
+    @Value("${mixit.default-image-url}")
+    private String defaultImageUrl;
     private final PostRepository postRepository;
     private final ImageService imageService;
     private final PostBookmarkService postBookmarkService;
@@ -66,7 +67,7 @@ public class PostSearchServiceImpl implements PostSearchService {
                     return PostResponse.fromEntity(
                             p,
                             null,
-                            DEFAULT_IMAGE_URL,
+                            defaultImageUrl,
                             imageService,
                             postBookmarkService,
                             rating

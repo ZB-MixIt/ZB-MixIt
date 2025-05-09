@@ -1,15 +1,19 @@
 package com.team1.mixIt.post.controller;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
+import com.team1.mixIt.post.dto.request.RatingRequest;
+import com.team1.mixIt.post.exception.BadRequestException;
 import com.team1.mixIt.post.service.PostRatingService;
 import com.team1.mixIt.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.math.BigDecimal;
 
@@ -32,15 +36,13 @@ public class PostRatingController {
             @ApiResponse(responseCode = "404", description = "게시물 없음"),
             @ApiResponse(responseCode = "500", description = "서버 에러")
     })
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseTemplate<Void> ratePost(
             @PathVariable Long postId,
             @AuthenticationPrincipal User user,
-            @RequestParam BigDecimal rate
+            @Valid @RequestBody RatingRequest req
     ) {
-        if (rate == null) {
-            rate = BigDecimal.ZERO;
-        }
+        BigDecimal rate = req.getRate();  // 1.0 ~ 5.0, 0.5 단위
         ratingService.addOrUpdateRating(postId, user.getId(), rate);
         return ResponseTemplate.ok();
     }
@@ -60,6 +62,8 @@ public class PostRatingController {
             @PathVariable Long postId,
             @AuthenticationPrincipal User user
     ) {
-        return ResponseTemplate.ok(ratingService.getUserRating(postId, user.getId()));
+        return ResponseTemplate.ok(
+                ratingService.getUserRating(postId, user.getId())
+        );
     }
 }

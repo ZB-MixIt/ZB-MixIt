@@ -25,6 +25,7 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -43,16 +44,14 @@ import static java.util.Objects.nonNull;
 @Service
 @RequiredArgsConstructor
 public class PostService {
-
-    public static final String DEFAULT_IMAGE_URL =
-            "https://mixit-local.s3.ap-northeast-2.amazonaws.com/e94bb2e2-9symbol.png";
+    @Value("${mixit.default-image-url}")
+    private String defaultImageUrl;
 
     private final UserRepository userRepository;
     private final PostRepository postRepository;
     private final PostHashtagRepository hashtagRepository;
     private final PostLikeRepository postLikeRepository;
     private final ImageService imageService;
-    private final ReviewService reviewService;
     private final ActionLogRepository actionLogRepository;
     private final PostBookmarkService postBookmarkService;
     private final PostRatingService ratingService;
@@ -97,13 +96,14 @@ public class PostService {
             Long currentUserId,
             ImageService imageService,
             PostBookmarkService bookmarkService,
-            PostRatingService ratingService
+            PostRatingService ratingService,
+            String defaultImageUrl
     ) {
         try {
-            // 1) 조회수 증가 (트랜잭션 내에서 실행)
+            // 조회수 증가
             postRepository.increaseViewCount(postId);
 
-            // 2) 액션 로그 저장
+            // 액션 로그 저장
             actionLogRepository.save(ActionLog.builder()
                     .postId(postId)
                     .userId(currentUserId)
@@ -111,24 +111,24 @@ public class PostService {
                     .build()
             );
 
-            // 3) 연관관계(작성자, 프로필 이미지, 해시태그) 전부 Fetch Join 으로 한 방에 가져오기
+            // 연관관계(작성자, 프로필 이미지, 해시태그) 전부 Fetch Join 으로 한 방에 가져오기
             Post p = postRepository.findWithAllById(postId)
                     .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
 
-            // 4) 좋아요 여부 & 수
+            // 좋아요 여부 수
             boolean hasLiked = postLikeRepository
                     .findByPostIdAndUserId(postId, currentUserId)
                     .isPresent();
             long likeCnt = postLikeRepository.countByPostId(postId);
 
-            // 5) 별점 정보
+            // 별점 정보
             RatingResponse rating = ratingService.getRatingResponse(postId);
 
-            // 6) DTO 변환 (이때 p.getUser(), p.getUser().getProfileImage(), p.getHashtag() 모두 이미 초기화된 상태)
+            // DTO 변환
             PostResponse dto = PostResponse.fromEntity(
                     p,
                     currentUserId,
-                    DEFAULT_IMAGE_URL,
+                    defaultImageUrl,
                     imageService,
                     bookmarkService,
                     rating
@@ -204,7 +204,7 @@ public class PostService {
                     PostResponse dto = PostResponse.fromEntity(
                             p,
                             currentUserId,
-                            DEFAULT_IMAGE_URL,
+                            defaultImageUrl,
                             imageService,
                             postBookmarkService,
                             rating

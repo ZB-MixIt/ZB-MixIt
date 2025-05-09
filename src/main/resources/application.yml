@@ -9,7 +9,6 @@ spring:
     include: private, email
   jpa:
     open-in-view: false
-
   autoconfigure:
     exclude:
       - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
@@ -18,3 +17,6 @@ security:
   jwt:
     expiration-time: 86400000
     secret-key: VlwEyVBsYt9V7zq57TejMnVUyzblYcfPQye08f7MGVA9XkHa
+
+mixit:
+  default-image-url: https://mixit-local.s3.ap-northeast-2.amazonaws.com/_defaultimg.png
