@@ -28,6 +28,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -104,56 +105,68 @@ public class PostController {
 
         return ResponseTemplate.ok(dto);
     }
-
+    @Operation(summary = "게시물 수정 (JSON)", description = "텍스트만 수정")
     @PutMapping(
-            value = "/{id}",
-            consumes = {
-                    MediaType.APPLICATION_JSON_VALUE,
-                    MediaType.MULTIPART_FORM_DATA_VALUE
-            },
+            path = "/{id}",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseTemplate<PostResponse> updatePost(
+    public ResponseTemplate<PostResponse> updateJson(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
+            @RequestBody @Valid PostUpdateRequest req
+    ) {
+        // 기존 이미지 유지, dto.setImageIds에 이미 들어있다고 가정
+        postService.updatePost(user.getId(), id, req);
 
-            // JSON-only 요청일 땐 여기에 바인딩
-            @RequestBody(required = false) @Valid PostUpdateRequest jsonDto,
+        PostResponse resp = postService.getPostById(
+                id, user.getId(), imageService, bookmarkService, ratingService, defaultImageUrl
+        );
+        return ResponseTemplate.ok(resp);
+    }
 
-            // multipart/form-data 요청일 땐 여기에 바인딩
-            @RequestPart(value = "dto", required = false) @Valid PostUpdateRequest partDto,
-
+    @Operation(summary = "게시물 수정 (multipart)", description = "이미지 변경/추가/삭제 + 텍스트 수정")
+    @PutMapping(
+            path = "/{id}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseTemplate<PostResponse> updateMultipart(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @RequestPart("dto") String dtoJson,
             @RequestPart(value = "newImages",     required = false) List<MultipartFile> newImages,
             @RequestPart(value = "removeImageIds", required = false) List<Long> removeImageIds
-    ) {
-        // 어떤 DTO
-        PostUpdateRequest dto = (jsonDto != null) ? jsonDto : partDto;
+    ) throws IOException {
+        // 1. JSON 문자열을 객체로 역직렬화
+        PostUpdateRequest req = objectMapper.readValue(dtoJson, PostUpdateRequest.class);
 
-        // multipart 로 온 경우만 이미지 처리
+        // 새로 업로드된 이미지 처리
         List<Long> uploaded = validateAndUploadImages(user, newImages);
-        List<Long> original = dto.getImageIds() != null
-                ? dto.getImageIds()
+
+        // 기존/삭제될 이미지 정리
+        List<Long> original = req.getImageIds() != null
+                ? req.getImageIds()
                 : Collections.emptyList();
         List<Long> retained = original.stream()
                 .filter(id0 -> removeImageIds == null || !removeImageIds.contains(id0))
                 .toList();
 
+        // 최종 이미지 ID 리스트 세팅
         List<Long> finalImageIds = new ArrayList<>(retained);
         finalImageIds.addAll(uploaded);
-        dto.setImageIds(finalImageIds);
+        req.setImageIds(finalImageIds);
 
-        // 업데이트 실행
-        postService.updatePost(user.getId(), id, dto);
+        // 서비스 호출
+        postService.updatePost(user.getId(), id, req);
+
+        // 업데이트된 댓글 조회 후 반환
         PostResponse resp = postService.getPostById(
-                id,
-                user.getId(),
-                imageService,
-                bookmarkService,
-                ratingService,
-                defaultImageUrl
+                id, user.getId(), imageService, bookmarkService, ratingService, defaultImageUrl
         );
         return ResponseTemplate.ok(resp);
-}
+    }
+
     @Operation(summary = "게시물 삭제", description = "내가 쓴 게시물을 삭제합니다.")
     @ApiResponse(responseCode = "200", description = "삭제 성공")
     @DeleteMapping("/{id}")
