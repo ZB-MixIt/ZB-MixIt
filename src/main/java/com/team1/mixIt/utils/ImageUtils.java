@@ -1,9 +1,16 @@
 package com.team1.mixIt.utils;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+@Component
 public class ImageUtils {
-    private ImageUtils() {}
+    private static String DEFAULT_IMG_URL;
+    private ImageUtils(@Value("${mixit.default-image-url}") String defaultImg) {
+        ImageUtils.DEFAULT_IMG_URL = defaultImg;
+    }
 
     public static String getDefaultImageUrl() {
-        return "https://mixit-local.s3.ap-northeast-2.amazonaws.com/d278b9e0-bblank-profile-picture-973461_1920.png";
+        return ImageUtils.DEFAULT_IMG_URL;
     }
 }
