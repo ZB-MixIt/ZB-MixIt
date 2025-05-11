@@ -6,7 +6,7 @@ spring:
     name: mixIt
   profiles:
     active: local
-    include: private, email
+    include: private, email, kakao
   jpa:
     open-in-view: false
   autoconfigure:

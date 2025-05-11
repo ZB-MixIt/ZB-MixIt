@@ -7,5 +7,6 @@ log/
 src/main/resources/application-private.yml
 src/main/resources/application-email.yml
 src/main/resources/application-dev.yml
+src/main/resources/application-kakao.yml
 
 .idea

@@ -4,6 +4,7 @@ import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.common.service.AuthenticationService;
 import com.team1.mixIt.common.service.JwtService;
 import com.team1.mixIt.user.entity.User;
+import com.team1.mixIt.user.service.KakaoAuthenticationService;
 import com.team1.mixIt.utils.DateUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +15,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.validator.constraints.Length;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "User Login")
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthenticationController {
     private final JwtService jwtService;
     private final AuthenticationService authenticationService;
+    private final KakaoAuthenticationService kakaoAuthService;
 
     @PostMapping("/login")
     @Operation(
@@ -33,6 +36,36 @@ public class AuthenticationController {
         User user = authenticationService.authenticate(request.getLoginId(), request.getPassword());
         String token = jwtService.generateToken(user);
 
+        return ResponseTemplate.ok(
+                LoginResponse.builder()
+                        .loginId(user.getLoginId())
+                        .name(user.getName())
+                        .nickname(user.getNickname())
+                        .imageSrc(user.getProfileImage() == null ? null : user.getProfileImage().getUrl())
+                        .email(user.getEmail())
+                        .birth(DateUtils.yyMMdd(user.getBirthdate()))
+                        .token(token)
+                        .expiresIn(jwtService.getExpirationTime())
+                        .build()
+        );
+    }
+
+    @GetMapping("/auth/kakao")
+    @Operation(
+            summary = "Kakao Login",
+            description = "Kakao Login 요청 api. 카카오 로그인 페이지로 redirect"
+    )
+    public ResponseEntity<Void> requestKakaoLogin() {
+        return kakaoAuthService.requestLogin();
+    }
+
+    @GetMapping("/auth/kakao/callback")
+    @Operation(
+            summary = "User kakao login callback",
+            description = "User 의 Kakao Login Redirection 처리 API")
+    public ResponseTemplate<LoginResponse> kakaoLogin(@RequestParam("code") String accessCode) {
+        User user = kakaoAuthService.getOrCreateUser(accessCode);
+        String token = jwtService.generateToken(user);
         return ResponseTemplate.ok(
                 LoginResponse.builder()
                         .loginId(user.getLoginId())

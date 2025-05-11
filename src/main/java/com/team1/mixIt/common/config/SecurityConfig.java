@@ -28,11 +28,14 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter authenticationFilter;
     private static final String[] AUTH_WHITELIST = {
             "/api/v1/login",
+            "/api/v1/auth/kakao/callback",
             "/api/v1/accounts/**",
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/api/v1/tags/popular",
-            "/api/v1/home/**"
+            "/api/v1/home/**",
+            "/api/v1/auth/kakao/callback",
+            "/api/v1/auth/kakao"
     };
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
