@@ -4,17 +4,20 @@ import com.team1.mixIt.actionlog.repository.ActionLogRepository;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.response.HomeFeedResponse;
 import com.team1.mixIt.post.dto.response.PostResponse;
-import com.team1.mixIt.post.dto.response.RatingResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.tag.dto.response.TagStatResponse;
 import com.team1.mixIt.tag.service.TagStatsService;
 import com.team1.mixIt.utils.ImageUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,119 +33,100 @@ public class HomeFeedService {
     private final PostBookmarkService postBookmarkService;
     private final PostRatingService ratingService;
 
-    /** 카테고리별 최근 24시간 게시물, 없으면 전체 최신순 */
+    /** 홈: 카테고리별 최신 게시물 (24h -> 7d -> 30d -> 전체) */
     @Transactional(readOnly = true)
     public Page<PostResponse> getHomeByCategory(String category, int page, int size) {
-        LocalDateTime since = LocalDateTime.now().minusHours(24);
         Pageable pg = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        Page<Post> recent = postRepository.findAll(
-                (root, query, cb) -> cb.and(
+        Page<Post> p24 = findByCreatedAfter(category, pg, Duration.ofHours(24));
+        if (p24.getNumberOfElements() == size) return mapPosts(p24);
+
+        Page<Post> p7d = findByCreatedAfter(category, pg, Duration.ofDays(7));
+        if (p7d.getNumberOfElements() == size) return mapPosts(p7d);
+
+        Page<Post> p30d = findByCreatedAfter(category, pg, Duration.ofDays(30));
+        if (p30d.hasContent()) return mapPosts(p30d);
+
+        // fallback: 전체기간 동일 Pageable
+        Page<Post> all = postRepository.findAll(
+                (root, q, cb) -> cb.equal(root.get("category"), category),
+                pg
+        );
+        return mapPosts(all);
+    }
+
+    private Page<Post> findByCreatedAfter(String category, Pageable pg, Duration ago) {
+        LocalDateTime since = LocalDateTime.now().minus(ago);
+        return postRepository.findAll(
+                (root, q, cb) -> cb.and(
                         cb.equal(root.get("category"), category),
                         cb.greaterThanOrEqualTo(root.get("createdAt"), since)
                 ),
                 pg
         );
-
-        Page<Post> result = recent.hasContent()
-                ? recent
-                : postRepository.findAll(
-                (root, query, cb) -> cb.equal(root.get("category"), category),
-                PageRequest.of(page, size, Sort.by("createdAt").descending())
-        );
-
-        return result.map(p -> toDto(p));
     }
 
-    /** 당일 조회수 Top N, 없으면 전체 조회수 순 */
+    /** 홈: 오늘의 인기 조회수 TopN (1d -> 7d -> 30d -> 전체 viewCount) */
     @Transactional(readOnly = true)
     public Page<PostResponse> getTodayTopViewed(int page, int size) {
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        LocalDateTime tomorrowStart = todayStart.plusDays(1);
+        Pageable pg = PageRequest.of(page, size, Sort.unsorted());
 
-        Page<Long> ids = actionLogRepository.findTopViewedPostIds(
-                todayStart, tomorrowStart,
-                PageRequest.of(page, size)
-        );
+        Page<PostResponse> today = aggregateByAction("VIEW", Duration.ofDays(1), pg);
+        if (today.getNumberOfElements() == size) return today;
 
-        Page<PostResponse> viewed = ids.map(id -> toDto(postRepository.findById(id).orElseThrow()));
+        Page<PostResponse> week = aggregateByAction("VIEW", Duration.ofDays(7), pg);
+        if (week.getNumberOfElements() == size) return week;
 
-        if (viewed.hasContent()) return viewed;
+        Page<PostResponse> month = aggregateByAction("VIEW", Duration.ofDays(30), pg);
+        if (month.hasContent()) return month;
 
-        // fallback: 전체 게시물 조회수 순
-        Page<Post> fallback = postRepository.findAll(
+        // fallback: 전체 viewCount 컬럼 순
+        return postRepository.findAll(
                 PageRequest.of(page, size, Sort.by("viewCount").descending())
-        );
-        return fallback.map(p -> toDto(p));
+        ).map(this::toDto);
     }
 
-    /** 주간 조회수 Top N, 없으면 전체 조회수 순 */
+    /** 홈: 주간 인기 조회수 TopN (최근 7일 action_log 집계) */
     @Transactional(readOnly = true)
     public Page<PostResponse> getWeeklyTopViewed(int page, int size) {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime weekAgo = now.minusDays(7);
-
-        Page<Object[]> raw = actionLogRepository.findWeeklyViews(
-                weekAgo, now,
-                PageRequest.of(page, size)
-        );
-
-        List<PostResponse> list = raw.getContent().stream()
-                .map(arr -> toDto(postRepository.findById((Long) arr[0]).orElseThrow()))
-                .toList();
-
-        Page<PostResponse> weekly = new PageImpl<>(list, raw.getPageable(), raw.getTotalElements());
-        if (weekly.hasContent()) return weekly;
-
-        // fallback: 전체 조회수 순
-        Page<Post> fallback = postRepository.findAll(
-                PageRequest.of(page, size, Sort.by("viewCount").descending())
-        );
-        return fallback.map(p -> toDto(p));
+        // 이번 주(7일) 집계만 하고, 부족해도 추가 fallback 없이 그대로 넘겨요.
+        return aggregateByAction("VIEW", Duration.ofDays(7),
+                PageRequest.of(page, size, Sort.unsorted()));
     }
 
-    /** 당일 북마크 Top N, 없으면 전체 북마크 순 */
+    /** 홈: 인기 조합 더보기 (동일 as 오늘의 인기 조회수, but pageable) */
+    public Page<PostResponse> getPopularCombos(int page, int size) {
+        return getTodayTopViewed(page, size);
+    }
+
+    /** 홈: 오늘의 추천 북마크 TopN (1d -> 7d -> 30d -> 전체 bookmarkCount) */
     @Transactional(readOnly = true)
     public Page<PostResponse> getTodayTopBookmarked(int page, int size) {
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        LocalDateTime tomorrowStart = todayStart.plusDays(1);
+        Pageable pg = PageRequest.of(page, size, Sort.unsorted());
 
-        Page<Long> ids = actionLogRepository.findTopBookmarkedPostIds(
-                todayStart, tomorrowStart,
-                PageRequest.of(page, size)
-        );
+        Page<PostResponse> today = aggregateByAction("BOOKMARK", Duration.ofDays(1), pg);
+        if (today.getNumberOfElements() == size) return today;
 
-        Page<PostResponse> bookmarked = ids.map(id -> toDto(postRepository.findById(id).orElseThrow()));
+        Page<PostResponse> week = aggregateByAction("BOOKMARK", Duration.ofDays(7), pg);
+        if (week.getNumberOfElements() == size) return week;
 
-        if (bookmarked.hasContent()) return bookmarked;
+        Page<PostResponse> month = aggregateByAction("BOOKMARK", Duration.ofDays(30), pg);
+        if (month.hasContent()) return month;
 
-        Page<Post> fallback = postRepository.findAll(
+        // fallback: 전체 bookmarkCount 순
+        return postRepository.findAll(
                 PageRequest.of(page, size, Sort.by("bookmarkCount").descending())
-        );
-        return fallback.map(p -> toDto(p));
+        ).map(this::toDto);
     }
 
-    /** 주간 북마크 Top N, 없으면 전체 북마크 순 */
+    /** 홈: 주간 인기 북마크 TopN */
     @Transactional(readOnly = true)
     public Page<PostResponse> getWeeklyTopBookmarked(int page, int size) {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime weekAgo = now.minusDays(7);
-
-        Page<Long> ids = actionLogRepository.findWeeklyBookmarkedPostIds(
-                weekAgo, now,
-                PageRequest.of(page, size)
-        );
-
-        Page<PostResponse> weekly = ids.map(id -> toDto(postRepository.findById(id).orElseThrow()));
-        if (weekly.hasContent()) return weekly;
-
-        Page<Post> fallback = postRepository.findAll(
-                PageRequest.of(page, size, Sort.by("bookmarkCount").descending())
-        );
-        return fallback.map(p -> toDto(p));
+        return aggregateByAction("BOOKMARK", Duration.ofDays(7),
+                PageRequest.of(page, size, Sort.unsorted()));
     }
 
-    /** 추천: 당일 북마크 Top + 인기 태그 */
+    /** 홈: 추천 탭 (오늘 북마크된 게시물 + 인기 태그 10개) */
     @Transactional(readOnly = true)
     public HomeFeedResponse getTodayRecommendations(int page, int size) {
         Page<PostResponse> posts = getTodayTopBookmarked(page, size);
@@ -150,16 +134,37 @@ public class HomeFeedService {
         return new HomeFeedResponse(posts, tags);
     }
 
-    // — 공통 DTO 변환: Post -> PostResponse
+    /** action 로그 집계 후 PostResponse로 매핑 (VIEW/BOOKMARK) */
+    private Page<PostResponse> aggregateByAction(String action, Duration ago, Pageable pg) {
+        LocalDateTime start = LocalDate.now().atStartOfDay().minus(ago.minusDays(1));
+        LocalDateTime end   = LocalDate.now().atStartOfDay().plusDays(1);
+
+        Page<Long> ids = switch (action) {
+            case "VIEW"     -> actionLogRepository.findTopViewedPostIds(start, end, pg);
+            case "BOOKMARK" -> actionLogRepository.findTopBookmarkedPostIds(start, end, pg);
+            default         -> Page.empty(pg);
+        };
+
+        return ids.map(id -> {
+            Post p = postRepository.findById(id).orElseThrow();
+            return toDto(p);
+        });
+    }
+
+    /** Post -> PostResponse 변환 헬퍼 */
     private PostResponse toDto(Post p) {
-        RatingResponse rating = ratingService.getRatingResponse(p.getId());
         return PostResponse.fromEntity(
                 p,
                 null,
                 ImageUtils.getDefaultImageUrl(),
                 imageService,
                 postBookmarkService,
-                rating
+                ratingService.getRatingResponse(p.getId())
         );
+    }
+
+    /** Page<Post> -> Page<PostResponse> 매핑 헬퍼 */
+    private Page<PostResponse> mapPosts(Page<Post> posts) {
+        return posts.map(this::toDto);
     }
 }

@@ -11,6 +11,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.domain.Sort;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -65,6 +66,13 @@ public class PostResponse {
 
     @Schema(description = "별점 정보")
     private RatingResponse rating;
+
+    @Schema(description = "게시물 생성일시")
+    private LocalDateTime createdAt;
+
+    @Schema(description = "게시물 수정일시")
+    private LocalDateTime updatedAt;
+
 
     @Getter
     @Setter
@@ -132,6 +140,8 @@ public class PostResponse {
                 .isAuthor(authorFlag)
                 .rating(rating)
                 .authorProfileImage(profileUrl)
+                .createdAt(p.getCreatedAt())
+                .updatedAt(p.getModifiedAt())
                 .build();
     }
 }
