@@ -30,136 +30,136 @@ public class HomeFeedService {
     private final PostBookmarkService postBookmarkService;
     private final PostRatingService ratingService;
 
-
-    //  카테고리별 페이징 조회 (최근 24시간)
+    /** 카테고리별 최근 24시간 게시물, 없으면 전체 최신순 */
     @Transactional(readOnly = true)
     public Page<PostResponse> getHomeByCategory(String category, int page, int size) {
         LocalDateTime since = LocalDateTime.now().minusHours(24);
         Pageable pg = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        Page<Post> posts = postRepository.findAll(
+        Page<Post> recent = postRepository.findAll(
                 (root, query, cb) -> cb.and(
                         cb.equal(root.get("category"), category),
                         cb.greaterThanOrEqualTo(root.get("createdAt"), since)
-                ), pg
+                ),
+                pg
         );
 
-        return posts.map(p ->
-                PostResponse.fromEntity(
-                        p,
-                        null,
-                        ImageUtils.getDefaultImageUrl(),
-                        imageService,
-                        postBookmarkService,
-                        null)
+        Page<Post> result = recent.hasContent()
+                ? recent
+                : postRepository.findAll(
+                (root, query, cb) -> cb.equal(root.get("category"), category),
+                PageRequest.of(page, size, Sort.by("createdAt").descending())
         );
+
+        return result.map(p -> toDto(p));
     }
 
-    // 당일 조회수 Top N (페이징)
+    /** 당일 조회수 Top N, 없으면 전체 조회수 순 */
     @Transactional(readOnly = true)
     public Page<PostResponse> getTodayTopViewed(int page, int size) {
-        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
-        LocalDateTime startOfTomorrow = startOfToday.plusDays(1);
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        LocalDateTime tomorrowStart = todayStart.plusDays(1);
 
         Page<Long> ids = actionLogRepository.findTopViewedPostIds(
-                startOfToday,
-                startOfTomorrow,
-                PageRequest.of(page, size, Sort.unsorted())
+                todayStart, tomorrowStart,
+                PageRequest.of(page, size)
         );
 
-        return ids.map(id -> {
-            Post p = postRepository.findById(id).orElseThrow();
-            return PostResponse.fromEntity(p,
-                    null,
-                    ImageUtils.getDefaultImageUrl(),
-                    imageService,
-                    postBookmarkService,
-                    null);
-        });
+        Page<PostResponse> viewed = ids.map(id -> toDto(postRepository.findById(id).orElseThrow()));
+
+        if (viewed.hasContent()) return viewed;
+
+        // fallback: 전체 게시물 조회수 순
+        Page<Post> fallback = postRepository.findAll(
+                PageRequest.of(page, size, Sort.by("viewCount").descending())
+        );
+        return fallback.map(p -> toDto(p));
     }
 
-
-    // 주간 조회수 Top N (페이징)
+    /** 주간 조회수 Top N, 없으면 전체 조회수 순 */
     @Transactional(readOnly = true)
     public Page<PostResponse> getWeeklyTopViewed(int page, int size) {
-        LocalDateTime now     = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
         LocalDateTime weekAgo = now.minusDays(7);
 
         Page<Object[]> raw = actionLogRepository.findWeeklyViews(
-                weekAgo,
-                now,
+                weekAgo, now,
                 PageRequest.of(page, size)
         );
 
         List<PostResponse> list = raw.getContent().stream()
-                .map(arr -> {
-                    Long id = (Long) arr[0];
-                    Post p = postRepository.findById((Long)arr[0]).orElseThrow();
-                    return PostResponse.fromEntity(
-                            p,
-                            null,
-                            ImageUtils.getDefaultImageUrl(),
-                            imageService,
-                            postBookmarkService,
-                            null);
-                })
+                .map(arr -> toDto(postRepository.findById((Long) arr[0]).orElseThrow()))
                 .toList();
 
-        return new PageImpl<>(list, raw.getPageable(), raw.getTotalElements());
+        Page<PostResponse> weekly = new PageImpl<>(list, raw.getPageable(), raw.getTotalElements());
+        if (weekly.hasContent()) return weekly;
+
+        // fallback: 전체 조회수 순
+        Page<Post> fallback = postRepository.findAll(
+                PageRequest.of(page, size, Sort.by("viewCount").descending())
+        );
+        return fallback.map(p -> toDto(p));
     }
 
-    // 당일 북마크 Top N (페이징)
+    /** 당일 북마크 Top N, 없으면 전체 북마크 순 */
     @Transactional(readOnly = true)
     public Page<PostResponse> getTodayTopBookmarked(int page, int size) {
-        // 오늘 00:00부터 내일 00:00 전까지의 범위 설정
-        LocalDateTime startOfToday    = LocalDate.now().atStartOfDay();
-        LocalDateTime startOfTomorrow = startOfToday.plusDays(1);
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        LocalDateTime tomorrowStart = todayStart.plusDays(1);
 
         Page<Long> ids = actionLogRepository.findTopBookmarkedPostIds(
-                startOfToday,
-                startOfTomorrow,
-                PageRequest.of(page, size, Sort.unsorted())
+                todayStart, tomorrowStart,
+                PageRequest.of(page, size)
         );
 
-        return ids.map(id -> {
-            Post p = postRepository.findById(id).orElseThrow();
-            return PostResponse.fromEntity(
-                    p,
-                    null,
-                    ImageUtils.getDefaultImageUrl(),
-                    imageService,
-                    postBookmarkService,
-                    null);
-        });
+        Page<PostResponse> bookmarked = ids.map(id -> toDto(postRepository.findById(id).orElseThrow()));
+
+        if (bookmarked.hasContent()) return bookmarked;
+
+        Page<Post> fallback = postRepository.findAll(
+                PageRequest.of(page, size, Sort.by("bookmarkCount").descending())
+        );
+        return fallback.map(p -> toDto(p));
     }
 
-   // 주간 북마크 TOP N
+    /** 주간 북마크 Top N, 없으면 전체 북마크 순 */
     @Transactional(readOnly = true)
     public Page<PostResponse> getWeeklyTopBookmarked(int page, int size) {
-        LocalDateTime now     = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
         LocalDateTime weekAgo = now.minusDays(7);
 
         Page<Long> ids = actionLogRepository.findWeeklyBookmarkedPostIds(
-                weekAgo, now, PageRequest.of(page, size, Sort.unsorted())
+                weekAgo, now,
+                PageRequest.of(page, size)
         );
 
-        return ids.map(id -> {
-            Post p = postRepository.findById(id).orElseThrow();
-            return PostResponse.fromEntity(
-                    p,
-                    null,
-                    ImageUtils.getDefaultImageUrl(),
-                    imageService,
-                    postBookmarkService,
-                    null);
-        });
+        Page<PostResponse> weekly = ids.map(id -> toDto(postRepository.findById(id).orElseThrow()));
+        if (weekly.hasContent()) return weekly;
+
+        Page<Post> fallback = postRepository.findAll(
+                PageRequest.of(page, size, Sort.by("bookmarkCount").descending())
+        );
+        return fallback.map(p -> toDto(p));
     }
 
-    // 추천 탭: 당일 북마크된 게시물 + 인기 태그 10개
+    /** 추천: 당일 북마크 Top + 인기 태그 */
     @Transactional(readOnly = true)
     public HomeFeedResponse getTodayRecommendations(int page, int size) {
         Page<PostResponse> posts = getTodayTopBookmarked(page, size);
         List<TagStatResponse> tags = tagStatsService.getTopTags(10);
         return new HomeFeedResponse(posts, tags);
+    }
+
+    // — 공통 DTO 변환: Post -> PostResponse
+    private PostResponse toDto(Post p) {
+        RatingResponse rating = ratingService.getRatingResponse(p.getId());
+        return PostResponse.fromEntity(
+                p,
+                null,
+                ImageUtils.getDefaultImageUrl(),
+                imageService,
+                postBookmarkService,
+                rating
+        );
     }
 }
