@@ -86,4 +86,12 @@ public class PostBookmarkService {
         );
         return BookmarkResponsePage.from(content);
     }
+
+    // 현재 userId가 postId를 북마크했는지 여부를 반환
+    @Transactional(readOnly = true)
+    public boolean isBookmarked(Long postId, Long userId) {
+        if (userId == null) return false;
+        UserBookmarkId key = new UserBookmarkId(userId, postId);
+        return userBookmarkRepository.existsById(key);
+    }
 }

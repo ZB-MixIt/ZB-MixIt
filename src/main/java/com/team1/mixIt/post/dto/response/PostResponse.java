@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -110,11 +109,8 @@ public class PostResponse {
 
         // 작성자 여부, 북마크 여부
         boolean authorFlag = currentUserId != null && p.getUserId().equals(currentUserId);
-        boolean bookmarkedFlag = currentUserId != null
-                && bookmarkService.getMyBookmarks(currentUserId, 0, 1, Sort.unsorted())
-                .getContent()
-                .stream()
-                .anyMatch(b -> b.getId().equals(p.getId()));
+
+        boolean bookmarkedFlag = bookmarkService.isBookmarked(p.getId(), currentUserId);
 
         //프로필 이미지
         String profileUrl = null;
