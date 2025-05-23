@@ -21,7 +21,7 @@ public class Top5NotificationScheduler {
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
     public void notifyDailyTop5Views() {
-        Page<PostResponse> top5 = feedService.getTodayTopViewed(0,5);
+        Page<PostResponse> top5 = feedService.getTodayTopViewed(null,0,5);
         top5.forEach(dto ->
                 eventPublisher.publishEvent(new NotificationEvent(
                         this,
@@ -37,7 +37,7 @@ public class Top5NotificationScheduler {
     @Scheduled(cron = "0 0 0 * * MON")
     @Transactional
     public void notifyWeeklyTop5Bookmarks() {
-        Page<PostResponse> top5 = feedService.getWeeklyTopBookmarked(0,5);
+        Page<PostResponse> top5 = feedService.getWeeklyTopBookmarked(null, 0,5);
         top5.forEach(dto ->
                 eventPublisher.publishEvent(new NotificationEvent(
                         this,
