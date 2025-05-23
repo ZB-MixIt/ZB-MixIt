@@ -91,7 +91,6 @@ public class PostBookmarkService {
     @Transactional(readOnly = true)
     public boolean isBookmarked(Long postId, Long userId) {
         if (userId == null) return false;
-        UserBookmarkId key = new UserBookmarkId(userId, postId);
-        return userBookmarkRepository.existsById(key);
+        return userBookmarkRepository.existsByIdUserIdAndIdPostId(userId, postId);
     }
 }
