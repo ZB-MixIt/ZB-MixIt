@@ -44,8 +44,9 @@ public class HomeFeedController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
+        Long currentUserId = (user != null ? user.getId() : null);
         return ResponseTemplate.ok(
-                feedService.getHomeByCategory(currentUserId(user), category, page, size)
+                feedService.getHomeByCategory(currentUserId, category, page, size)
         );
     }
 
