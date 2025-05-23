@@ -102,7 +102,6 @@ public class HomeFeedController {
     public ResponseTemplate<Page<PostResponse>> bookmarks(
             @AuthenticationPrincipal User user
     ) {
-        Long currentUserId = user != null ? user.getId() : null;
         return ResponseTemplate.ok(
                 feedService.getTodayTopBookmarked(currentUserId(user), 0, 4)
         );
