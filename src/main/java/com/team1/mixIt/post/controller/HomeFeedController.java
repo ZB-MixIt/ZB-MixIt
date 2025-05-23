@@ -11,11 +11,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping(
         value = "/api/v1/home",
@@ -45,6 +47,8 @@ public class HomeFeedController {
             @RequestParam(defaultValue = "20") int size
     ) {
         Long currentUserId = (user != null ? user.getId() : null);
+        Long uid = (user != null ? user.getId() : null);
+        log.info(">>> currentUserId = {}", uid);
         return ResponseTemplate.ok(
                 feedService.getHomeByCategory(currentUserId, category, page, size)
         );
