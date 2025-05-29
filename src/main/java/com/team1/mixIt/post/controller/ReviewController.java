@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.util.*;
 import java.util.List;
 import java.util.Objects;
 
@@ -61,13 +62,15 @@ public class ReviewController {
     public ResponseTemplate<ReviewResponse> createMultipart(
             @PathVariable Long postId,
             @AuthenticationPrincipal User user,
-            @RequestPart("dto") String dtoJson,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images
-    ) throws IOException {
-        ReviewRequest req = objectMapper.readValue(dtoJson, ReviewRequest.class);
-        List<Long> imgIds = uploadAndGetIds(images, user);
-        req.setImageIds(imgIds);
-        return ResponseTemplate.ok(svc.addReview(postId, user, req));
+            @RequestPart("dto") @Valid ReviewRequest dto,
+            @RequestPart(value = "images", required = false) MultipartFile[] images
+    ) {
+        List<Long> imgIds = uploadAndGetIds(
+                images != null ? Arrays.asList(images) : Collections.emptyList(),
+                user
+        );
+        dto.setImageIds(imgIds);
+        return ResponseTemplate.ok(svc.addReview(postId, user, dto));
     }
 
     @Operation(summary = "리뷰 수정 (JSON)", description = "텍스트만 수정")
