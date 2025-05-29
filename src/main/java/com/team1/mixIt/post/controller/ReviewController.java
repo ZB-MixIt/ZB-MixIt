@@ -2,13 +2,14 @@ package com.team1.mixIt.post.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team1.mixIt.common.dto.ResponseTemplate;
+import com.team1.mixIt.image.entity.Image;
+import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.request.ReviewRequest;
 import com.team1.mixIt.post.dto.response.ReviewResponse;
 import com.team1.mixIt.post.exception.BadRequestException;
 import com.team1.mixIt.post.service.PostService;
 import com.team1.mixIt.post.service.ReviewService;
 import com.team1.mixIt.user.entity.User;
-import com.team1.mixIt.image.service.ImageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -24,7 +25,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -63,15 +65,12 @@ public class ReviewController {
             @PathVariable Long postId,
             @AuthenticationPrincipal User user,
             @RequestPart("dto") String dtoJson,
-            @RequestPart(value = "images", required = false) MultipartFile[] images
+            @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages
     ) throws IOException {
         ReviewRequest req = objectMapper.readValue(dtoJson, ReviewRequest.class);
 
-        List<Long> imgIds = uploadAndGetIds(
-                images != null ? Arrays.asList(images) : Collections.emptyList(),  // 배열 → 리스트
-                user
-        );
-        req.setImageIds(imgIds);
+        List<Long> imageIds = validateAndUploadImages(user, newImages);
+        req.setImageIds(imageIds);
 
         return ResponseTemplate.ok(svc.addReview(postId, user, req));
     }
@@ -103,24 +102,25 @@ public class ReviewController {
             @PathVariable Long reviewId,
             @AuthenticationPrincipal User user,
             @RequestPart("dto") String dtoJson,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images
+            @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages,
+            @RequestPart(value = "removeImageIds", required = false) List<Long> removeImageIds
     ) throws IOException {
         ReviewRequest req = objectMapper.readValue(dtoJson, ReviewRequest.class);
-        List<Long> imgIds = uploadAndGetIds(images, user);
-        req.setImageIds(imgIds);
+
+        List<Long> original = req.getImageIds() != null ? req.getImageIds() : List.of();
+        List<Long> retained = original.stream()
+                .filter(id -> removeImageIds == null || !removeImageIds.contains(id))
+                .toList();
+
+        List<Long> uploaded = validateAndUploadImages(user, newImages);
+
+        List<Long> finalIds = new ArrayList<>(retained);
+        finalIds.addAll(uploaded);
+        req.setImageIds(finalIds);
+
         return ResponseTemplate.ok(svc.updateReview(reviewId, user, req));
     }
 
-    @Operation(summary = "리뷰 삭제", description = "본인이 작성한 리뷰를 삭제합니다.")
-    @DeleteMapping("/{reviewId}")
-    public ResponseTemplate<Void> delete(
-            @PathVariable Long postId,
-            @PathVariable Long reviewId,
-            @AuthenticationPrincipal User user
-    ) {
-        svc.deleteReview(reviewId, user);
-        return ResponseTemplate.ok();
-    }
 
     @Operation(summary = "리뷰 목록", description = "게시물의 리뷰를 평점 순/최신순으로 조회합니다.")
     @GetMapping
@@ -135,11 +135,16 @@ public class ReviewController {
         return ResponseTemplate.ok(svc.listReviews(postId, currentUserId));
     }
 
-    private List<Long> uploadAndGetIds(List<MultipartFile> files, User user) {
-        if (files == null) return List.of();
-        if (files.size() > 10) throw new BadRequestException("최대 10장까지 업로드 가능합니다.");
+    private List<Long> validateAndUploadImages(User user, List<MultipartFile> images) {
+        if (images == null || images.isEmpty()) {
+            return Collections.emptyList();
+        }
+        if (images.size() > 10) {
+            throw new BadRequestException("최대 10장까지 업로드 가능합니다.");
+        }
 
-        return files.stream().map(file -> {
+        List<Long> ids = new ArrayList<>();
+        for (MultipartFile file : images) {
             if (file.getSize() > 10 * 1024 * 1024) {
                 throw new BadRequestException("이미지 파일은 10MB 이하만 가능합니다.");
             }
@@ -147,11 +152,13 @@ public class ReviewController {
                     .substring(file.getOriginalFilename().lastIndexOf('.') + 1)
                     .toLowerCase();
             if (!List.of("jpg", "jpeg", "png").contains(ext)) {
-                throw new BadRequestException("Jpg/Png만 지원합니다.");
+                throw new BadRequestException("JPG/PNG만 지원합니다.");
             }
-            return user != null && user.getLoginId() != null
-                    ? imageService.create(file, user.getLoginId()).getId()
-                    : imageService.create(file).getId();
-        }).toList();
+            Image img = (user != null && user.getLoginId() != null)
+                    ? imageService.create(file, user.getLoginId())
+                    : imageService.create(file);
+            ids.add(img.getId());
+        }
+        return ids;
     }
 }
