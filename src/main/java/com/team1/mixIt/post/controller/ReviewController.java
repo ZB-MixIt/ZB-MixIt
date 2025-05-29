@@ -63,11 +63,14 @@ public class ReviewController {
             @PathVariable Long postId,
             @AuthenticationPrincipal User user,
             @RequestPart("dto") String dtoJson,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images
+            @RequestPart(value = "images", required = false) MultipartFile[] images
     ) throws IOException {
         ReviewRequest req = objectMapper.readValue(dtoJson, ReviewRequest.class);
 
-        List<Long> imgIds = uploadAndGetIds(images, user);
+        List<Long> imgIds = uploadAndGetIds(
+                images != null ? Arrays.asList(images) : Collections.emptyList(),  // 배열 → 리스트
+                user
+        );
         req.setImageIds(imgIds);
 
         return ResponseTemplate.ok(svc.addReview(postId, user, req));
