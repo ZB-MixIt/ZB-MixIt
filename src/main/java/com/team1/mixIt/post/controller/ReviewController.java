@@ -102,11 +102,22 @@ public class ReviewController {
             @PathVariable Long reviewId,
             @AuthenticationPrincipal User user,
             @RequestPart("dto") String dtoJson,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images
+            @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages,
+            @RequestPart(value = "removeImageIds", required = false) List<Long> removeImageIds
     ) throws IOException {
         ReviewRequest req = objectMapper.readValue(dtoJson, ReviewRequest.class);
-        List<Long> imgIds = uploadAndGetIds(images, user);
-        req.setImageIds(imgIds);
+
+        List<Long> original = req.getImageIds() != null ? req.getImageIds() : List.of();
+        List<Long> retained = original.stream()
+                .filter(id -> removeImageIds == null || !removeImageIds.contains(id))
+                .toList();
+
+        List<Long> uploaded = validateAndUploadImages(user, newImages);
+
+        List<Long> finalIds = new ArrayList<>(retained);
+        finalIds.addAll(uploaded);
+        req.setImageIds(finalIds);
+
         return ResponseTemplate.ok(svc.updateReview(reviewId, user, req));
     }
 
