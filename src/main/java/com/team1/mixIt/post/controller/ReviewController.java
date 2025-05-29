@@ -102,25 +102,24 @@ public class ReviewController {
             @PathVariable Long reviewId,
             @AuthenticationPrincipal User user,
             @RequestPart("dto") String dtoJson,
-            @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages,
-            @RequestPart(value = "removeImageIds", required = false) List<Long> removeImageIds
+            @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) throws IOException {
         ReviewRequest req = objectMapper.readValue(dtoJson, ReviewRequest.class);
-
-        List<Long> original = req.getImageIds() != null ? req.getImageIds() : List.of();
-        List<Long> retained = original.stream()
-                .filter(id -> removeImageIds == null || !removeImageIds.contains(id))
-                .toList();
-
-        List<Long> uploaded = validateAndUploadImages(user, newImages);
-
-        List<Long> finalIds = new ArrayList<>(retained);
-        finalIds.addAll(uploaded);
-        req.setImageIds(finalIds);
-
+        List<Long> imgIds = uploadAndGetIds(images, user);
+        req.setImageIds(imgIds);
         return ResponseTemplate.ok(svc.updateReview(reviewId, user, req));
     }
 
+    @Operation(summary = "리뷰 삭제", description = "본인이 작성한 리뷰를 삭제합니다.")
+    @DeleteMapping("/{reviewId}")
+    public ResponseTemplate<Void> delete(
+            @PathVariable Long postId,
+            @PathVariable Long reviewId,
+            @AuthenticationPrincipal User user
+    ) {
+        svc.deleteReview(reviewId, user);
+        return ResponseTemplate.ok();
+    }
 
     @Operation(summary = "리뷰 목록", description = "게시물의 리뷰를 평점 순/최신순으로 조회합니다.")
     @GetMapping
