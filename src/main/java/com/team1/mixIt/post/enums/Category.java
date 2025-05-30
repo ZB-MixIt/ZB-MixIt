@@ -2,9 +2,7 @@ package com.team1.mixIt.post.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 @Getter
 public enum Category {
@@ -26,6 +24,9 @@ public enum Category {
 
     @JsonCreator
     public static Category fromJson(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
         return Category.valueOf(json);
     }
 }
