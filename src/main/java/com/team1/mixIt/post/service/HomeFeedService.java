@@ -151,11 +151,20 @@ public class HomeFeedService {
     }
 
     /** Post -> PostResponse 변환 헬퍼 */
-    private PostResponse toDto(Post p,  Long currentUserId) {
+    private PostResponse toDto(Post p, Long currentUserId) {
+        // 포스트에 이미지 ID가 하나라도 있으면 첫 번째 ID로 실제 URL을 가져오고 아무것도 없으면 기존 defaultImageUrl 을 사용
+        String firstImageUrl;
+        if (!p.getImageIds().isEmpty()) {
+            Long firstImageId = p.getImageIds().get(0);
+            firstImageUrl = imageService.findById(firstImageId).getUrl();
+        } else {
+            firstImageUrl = ImageUtils.getDefaultImageUrl();
+        }
+
         return PostResponse.fromEntity(
                 p,
                 currentUserId,
-                ImageUtils.getDefaultImageUrl(),
+                firstImageUrl,
                 imageService,
                 postBookmarkService,
                 ratingService.getRatingResponse(p.getId())
