@@ -105,7 +105,7 @@ public class PostResponse {
                 .toList();
 
         // 대표이미지
-        String def = imgDtos.isEmpty() ? defaultImageUrl : null;
+        String def = defaultImageUrl;
 
         // 작성자 여부, 북마크 여부
         boolean authorFlag = currentUserId != null && p.getUserId().equals(currentUserId);
