@@ -26,7 +26,7 @@ public class PostSearchController {
             }
     )
     @GetMapping
-    public ResponseTemplate<Page<PostResponse>> search(PostSearchRequest req) {
+    public ResponseTemplate<Page<PostResponse>> search(@ModelAttribute PostSearchRequest req) {
         return ResponseTemplate.ok(searchService.search(req));
     }
 }
