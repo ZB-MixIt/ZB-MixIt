@@ -4,6 +4,8 @@ import com.team1.mixIt.post.entity.ReviewLike;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface ReviewLikeRepository extends JpaRepository<ReviewLike, Long> {
 
@@ -12,4 +14,7 @@ public interface ReviewLikeRepository extends JpaRepository<ReviewLike, Long> {
     void deleteByReviewIdAndUserId(Long reviewId, Long userId);
 
     long countByReviewId(Long reviewId);
+
+    List<ReviewLike> findAllByUserIdAndReviewIdIn(Long userId, List<Long> reviewIds);
+
 }

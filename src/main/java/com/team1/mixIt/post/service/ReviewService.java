@@ -9,7 +9,9 @@ import com.team1.mixIt.post.dto.request.ReviewRequest;
 import com.team1.mixIt.post.dto.response.ReviewResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.entity.Review;
+import com.team1.mixIt.post.entity.ReviewLike;
 import com.team1.mixIt.post.repository.PostRepository;
+import com.team1.mixIt.post.repository.ReviewLikeRepository;
 import com.team1.mixIt.post.repository.ReviewRepository;
 import com.team1.mixIt.user.entity.User;
 import jakarta.transaction.Transactional;
@@ -17,15 +19,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ReviewService {
     private final ReviewRepository reviewRepo;
     private final PostRepository postRepo;
+    private final ReviewLikeRepository reviewLikeRepo;
     private final ImageService imageService;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -87,15 +91,31 @@ public class ReviewService {
         reviewRepo.delete(review);
     }
 
-    @Transactional(Transactional.TxType.SUPPORTS)
-    public List<ReviewResponse> listReviews(Long postId, Long currentUserId) {
-        return reviewRepo.findByPostIdOrderByCreatedAtDesc(postId)
-                .stream()
-                .map(r -> ReviewResponse.fromEntity(r, currentUserId, imageService))
-                .toList();
-    }
 
     public boolean existsByIdAndPostId(Long reviewId, Long postId) {
         return reviewRepo.existsByIdAndPostId(reviewId, postId);
     }
+
+    @Transactional(Transactional.TxType.SUPPORTS)
+    public List<ReviewResponse> listReviews(Long postId, Long currentUserId) {
+        List<Review> reviews = reviewRepo.findByPostIdOrderByCreatedAtDesc(postId);
+
+        Set<Long> likedIds = (currentUserId == null)
+                ? Collections.emptySet()
+                : reviewLikeRepo
+                .findAllByUserIdAndReviewIdIn(currentUserId,
+                        reviews.stream().map(Review::getId).toList()
+                ).stream()
+                .map(ReviewLike::getReviewId)
+                .collect(Collectors.toSet());
+
+        return reviews.stream().map(r -> {
+            ReviewResponse dto = ReviewResponse.fromEntity(r, currentUserId, imageService);
+            dto.setLikeCount(r.getLikeCount());
+            dto.setHasLiked(likedIds.contains(r.getId()));
+            return dto;
+        }).toList();
+    }
+}
+
 }

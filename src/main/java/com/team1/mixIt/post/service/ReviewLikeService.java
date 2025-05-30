@@ -1,10 +1,8 @@
 package com.team1.mixIt.post.service;
 
 import com.team1.mixIt.post.dto.response.LikeResponse;
-import com.team1.mixIt.post.entity.Review;
 import com.team1.mixIt.post.entity.ReviewLike;
 import com.team1.mixIt.post.repository.ReviewLikeRepository;
-import com.team1.mixIt.post.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,9 +32,4 @@ public class ReviewLikeService {
         return new LikeResponse(false, count);
     }
 
-    public LikeResponse status(Long reviewId, Long userId) {
-        boolean hasLiked = repo.existsByReviewIdAndUserId(reviewId, userId);
-        long count = repo.countByReviewId(reviewId);
-        return new LikeResponse(hasLiked, count);
-    }
 }
