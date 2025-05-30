@@ -9,7 +9,6 @@ import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.post.service.PostBookmarkService;
 import com.team1.mixIt.post.service.PostRatingService;
 import com.team1.mixIt.post.service.PostSearchService;
-import com.team1.mixIt.utils.ImageUtils;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -21,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +37,7 @@ public class PostSearchServiceImpl implements PostSearchService {
     private final PostRatingService ratingService;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<PostResponse> search(PostSearchRequest req) {
         Sort sort = Sort.by(
                 Sort.Direction.fromString(req.getSortDir()),
