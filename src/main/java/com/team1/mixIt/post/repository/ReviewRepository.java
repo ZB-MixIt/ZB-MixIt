@@ -2,16 +2,18 @@ package com.team1.mixIt.post.repository;
 
 import com.team1.mixIt.post.entity.Review;
 import io.lettuce.core.dynamic.annotation.Param;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
+    @EntityGraph(attributePaths = {"user", "user.profileImage"})
     List<Review> findByPostIdOrderByCreatedAtDesc(Long postId);
+
     Optional<Review> findByIdAndUserId(Long id, Long userId);
 
     long countByPostId(Long postId);

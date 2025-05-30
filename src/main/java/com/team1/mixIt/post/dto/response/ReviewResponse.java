@@ -22,6 +22,9 @@ public class ReviewResponse {
     @Schema(description = "작성자 ID", example = "45")
     private Long userId;
 
+    @Schema(description = "작성자 프로필 이미지 URL", example = "https://…/avatar.png")
+    private String userProfileImage;
+
     @Schema(description = "작성자 닉네임", example = "test")
     private String userNickname;
 
@@ -71,10 +74,17 @@ public class ReviewResponse {
                 ))
                 .toList();
 
+        // 프로필 이미지 url 가져오기 추가
+        Long profileImageId = r.getUser().getProfileImageId();
+        String profileUrl = (profileImageId != null)
+                ? imageService.findById(profileImageId).getUrl()
+                : null;
+
         return ReviewResponse.builder()
                 .id(r.getId())
                 .userId(r.getUser().getId())
                 .userNickname(r.getUser().getNickname())
+                .userProfileImage(profileUrl)
                 .content(r.getContent())
                 .createdAt(r.getCreatedAt())
                 .modifiedAt(r.getModifiedAt())
