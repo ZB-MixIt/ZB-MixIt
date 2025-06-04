@@ -21,6 +21,7 @@ import com.team1.mixIt.post.repository.PostRatingRepository;
 import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.repository.UserRepository;
+import com.team1.mixIt.utils.ImageUtils;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -160,6 +161,76 @@ public class PostService {
             dto.setLikeCount(cnt);
             return dto;
         }).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PostResponse> getAllPosts(Long userId, Pageable pageable) {
+
+        Page<Post> posts = postRepository.findAll(
+                (root, q, cb) -> cb.equal(root.get("userId"), userId),
+                pageable
+        );
+
+        return mapPosts(posts, userId);
+    }
+
+
+    private PostResponse toDto(Post p, Long currentUserId) {
+        // 1) 이미지 리스트(ImageDto)
+        List<PostResponse.ImageDto> imgDtos = p.getImageIds().stream()
+                .map(imageService::findById)
+                .map(img -> new PostResponse.ImageDto(img.getId(), img.getUrl()))
+                .toList();
+
+        // 2) 대표 이미지 URL: 이미지가 없으면 기본 URL
+        String defaultImageUrl;
+        if (!p.getImageIds().isEmpty()) {
+            Long firstImageId = p.getImageIds().get(0);
+            defaultImageUrl = imageService.findById(firstImageId).getUrl();
+        } else {
+            defaultImageUrl = ImageUtils.getDefaultImageUrl();
+        }
+
+        // 3) 좋아요 수와 현재 유저가 눌렀는지 여부
+        long likeCount = postLikeRepository.countByPostId(p.getId());
+        boolean hasLiked = (currentUserId != null) &&
+                postLikeRepository.findByPostIdAndUserId(p.getId(), currentUserId).isPresent();
+
+        // 4) 별점 정보
+        RatingResponse ratingResp = ratingService.getRatingResponse(p.getId());
+
+        // 5) 작성자 정보: User 엔티티에서 닉네임과 프로필 이미지 조회
+        User author = userRepository.findById(p.getUserId())
+                .orElseThrow(() -> new IllegalStateException("작성자 정보 없음"));
+        String authorNickname = author.getNickname();
+        String authorProfileImage = null;
+        if (author.getProfileImage() != null) {
+            authorProfileImage = author.getProfileImage().getUrl();
+        }
+
+        // 6) 북마크 여부
+        boolean hasBookmarked = (currentUserId != null) &&
+                postBookmarkService.isBookmarked(p.getId(), currentUserId);
+
+        // 7) 작성자 여부 판정
+        boolean isAuthor = (currentUserId != null) && p.getUserId().equals(currentUserId);
+
+        // 8) 최종 빌드
+        return PostResponse.fromEntity(
+                p,
+                currentUserId,
+                defaultImageUrl,
+                imageService,
+                postBookmarkService,
+                ratingResp,
+                likeCount,
+                hasLiked
+        );
+    }
+
+    /** Page<Post> -> Page<PostResponse> 매핑 헬퍼 */
+    private Page<PostResponse> mapPosts(Page<Post> posts, Long currentUserId) {
+        return posts.map(p -> toDto(p, currentUserId));
     }
 
 

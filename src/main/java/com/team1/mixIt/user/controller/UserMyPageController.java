@@ -1,6 +1,9 @@
 package com.team1.mixIt.user.controller;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
+import com.team1.mixIt.post.dto.response.PostResponse;
+import com.team1.mixIt.post.service.PostService;
+import com.team1.mixIt.post.service.ReviewService;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.service.UserService;
 import com.team1.mixIt.utils.DateUtils;
@@ -11,9 +14,14 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.*;
 import org.hibernate.validator.constraints.Length;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 
 @Tag(name = "User My Page")
@@ -24,6 +32,8 @@ import java.util.Objects;
 public class UserMyPageController {
 
     private final UserService userService;
+    private final PostService postService;
+    private final ReviewService reviewService;
 
     @Operation(
             summary = "Get MyPage",
@@ -68,6 +78,57 @@ public class UserMyPageController {
         );
         return ResponseTemplate.ok();
     }
+
+    @Operation(
+            summary = "Get My Posts",
+            description = "내 게시글 조회"
+    )
+    @GetMapping("/posts")
+    public ResponseTemplate<Page<PostResponse>> getMyPagePosts(@AuthenticationPrincipal User user,
+                                                               @RequestParam(defaultValue = "0") int page,
+                                                               @RequestParam(defaultValue = "10") int size,
+                                                               @RequestParam(defaultValue = "latest") String sort) {
+        Sort sortOption = switch (sort.toLowerCase()) {
+            case "popular" -> Sort.by(Sort.Direction.DESC, "bookmarkCount");
+            default -> Sort.by(Sort.Direction.DESC, "createdAt");
+        };
+
+        PageRequest pageRequest = PageRequest.of(page, size, sortOption);
+        Page<PostResponse> posts = postService.getAllPosts(user.getId(), pageRequest);
+        return ResponseTemplate.ok(posts);
+    }
+
+    @Operation(
+            summary = "Get My Reviews",
+            description = "내 댓글 조회"
+    )
+    @GetMapping("/reviews")
+    public ResponseTemplate<GetMyPageReviewsResponse> getMyPageReviews(@AuthenticationPrincipal User user,
+                                                                       @RequestParam(defaultValue = "0") int page,
+                                                                       @RequestParam(defaultValue = "10") int size) {
+        return null;
+    }
+
+    public record GetMyPageReviewsResponse(
+            List<ReviewDto> reviews
+    ) {}
+
+    public record ReviewDto(
+            PostInfo post,
+            ReviewInfo review
+    ) {}
+
+    public record PostInfo (
+            Long id,
+            String title,
+            String image
+    ) {}
+
+    public record ReviewInfo (
+            Long id,
+            String content,
+            LocalDateTime createdAt
+    ) {}
 
     @Getter
     @Builder
