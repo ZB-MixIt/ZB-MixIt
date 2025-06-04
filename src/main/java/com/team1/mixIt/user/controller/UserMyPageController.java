@@ -1,12 +1,17 @@
 package com.team1.mixIt.user.controller;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
+import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.post.dto.response.PostResponse;
+import com.team1.mixIt.post.entity.Post;
+import com.team1.mixIt.post.entity.Review;
 import com.team1.mixIt.post.service.PostService;
 import com.team1.mixIt.post.service.ReviewService;
 import com.team1.mixIt.user.entity.User;
+import com.team1.mixIt.user.service.UserMyPageService;
 import com.team1.mixIt.user.service.UserService;
 import com.team1.mixIt.utils.DateUtils;
+import com.team1.mixIt.utils.ImageUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -34,6 +39,7 @@ public class UserMyPageController {
     private final UserService userService;
     private final PostService postService;
     private final ReviewService reviewService;
+    private final UserMyPageService myPageService;
 
     @Operation(
             summary = "Get MyPage",
@@ -103,32 +109,49 @@ public class UserMyPageController {
             description = "내 댓글 조회"
     )
     @GetMapping("/reviews")
-    public ResponseTemplate<GetMyPageReviewsResponse> getMyPageReviews(@AuthenticationPrincipal User user,
+    public ResponseTemplate<Page<MyReviewDto>> getMyPageReviews(@AuthenticationPrincipal User user,
                                                                        @RequestParam(defaultValue = "0") int page,
                                                                        @RequestParam(defaultValue = "10") int size) {
-        return null;
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseTemplate.ok(myPageService.getMyReviews(user.getId(), pageRequest));
     }
 
-    public record GetMyPageReviewsResponse(
-            List<ReviewDto> reviews
-    ) {}
-
-    public record ReviewDto(
+    public record MyReviewDto(
             PostInfo post,
             ReviewInfo review
-    ) {}
+    ) {
+        public static MyReviewDto of(Review review, List<Image> images) {
+            return new MyReviewDto(
+                    PostInfo.of(review.getPost()),
+                    ReviewInfo.of(review, images)
+            );
+        }
+    }
 
     public record PostInfo (
             Long id,
-            String title,
-            String image
-    ) {}
+            String title
+    ) {
+        public static PostInfo of(Post post) {
+            return new PostInfo(post.getId(), post.getTitle());
+        }
+    }
 
     public record ReviewInfo (
             Long id,
             String content,
+            String image,
             LocalDateTime createdAt
-    ) {}
+    ) {
+        public static ReviewInfo of(Review review, List<Image> images) {
+            return new ReviewInfo(
+                    review.getId(),
+                    review.getContent(),
+                    images.size() == 0 ? ImageUtils.getDefaultImageUrl() : images.get(0).getUrl(),
+                    review.getCreatedAt()
+            );
+        }
+    }
 
     @Getter
     @Builder

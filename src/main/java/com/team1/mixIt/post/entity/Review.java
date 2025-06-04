@@ -6,12 +6,12 @@ import com.team1.mixIt.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "review")
+@NamedEntityGraph(name = "Review.withPost", attributeNodes = @NamedAttributeNode("post"))
 @Getter
 @Setter
 @NoArgsConstructor
