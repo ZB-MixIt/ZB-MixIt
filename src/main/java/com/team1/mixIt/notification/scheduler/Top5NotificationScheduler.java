@@ -21,10 +21,10 @@ public class Top5NotificationScheduler {
     @Transactional
     public void notifyDailyTop5Views() {
         Page<PostResponse> top5 = feedService.getTodayTopViewed(
-                null,    // 관리자/스케줄러 호출 시 userId = null
+                null,
                 0,
                 5,
-                "latest",   // 정렬 방법은 필요 시 바꿔도 됩니다.
+                "latest",
                 "desc"
         );
         top5.forEach(dto ->

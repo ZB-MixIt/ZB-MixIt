@@ -4,6 +4,7 @@ import com.team1.mixIt.actionlog.repository.ActionLogRepository;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.response.HomeFeedResponse;
 import com.team1.mixIt.post.dto.response.PostResponse;
+import com.team1.mixIt.post.dto.response.RatingResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.repository.PostLikeRepository;
 import com.team1.mixIt.post.repository.PostRepository;
@@ -11,7 +12,10 @@ import com.team1.mixIt.tag.dto.response.TagStatResponse;
 import com.team1.mixIt.tag.service.TagStatsService;
 import com.team1.mixIt.utils.ImageUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -304,14 +308,8 @@ public class HomeFeedService {
         }
 
         // 5) 별점 정보(BigDecimal → Double)
-        com.team1.mixIt.post.dto.response.RatingResponse extRating
-                = ratingService.getRatingResponse(p.getId());
-        Double avg = (extRating.getAverageRating() != null)
-                ? extRating.getAverageRating().doubleValue()
-                : 0.0;
-        long cnt = extRating.getRatingCount();
-        PostResponse.RatingResponse ratingResp =
-                new PostResponse.RatingResponse(avg, cnt);
+        RatingResponse extRating = ratingService.getRatingResponse(p.getId());
+
 
         // 6) 작성자 프로필 이미지 URL
         String authorProfileUrl = null;
@@ -326,7 +324,7 @@ public class HomeFeedService {
                 firstImageUrl,
                 imageService,
                 postBookmarkService,
-                ratingResp,
+                extRating,
                 likeCount,
                 hasLiked
         );

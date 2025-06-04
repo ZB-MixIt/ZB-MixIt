@@ -93,22 +93,6 @@ public class PostResponse {
         }
     }
 
-    @Getter
-    @Setter
-    @Schema(description = "별점 응답 DTO")
-    public static class RatingResponse {
-        @Schema(description = "평균 별점", example = "4.5")
-        private Double averageRating;
-
-        @Schema(description = "별점 투표 수", example = "10")
-        private Long ratingCount;
-
-        public RatingResponse(Double averageRating, Long ratingCount) {
-            this.averageRating = averageRating;
-            this.ratingCount = ratingCount;
-        }
-    }
-
     /**
      * Entity → DTO 변환 메서드
      * 마지막에 하드코딩된 좋아요 개수(0L)나 hasLiked(false)를 제거하고,
