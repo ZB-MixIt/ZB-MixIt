@@ -143,7 +143,6 @@ public class PostResponse {
                 .hasLiked(hasLiked)
                 .likeCount(likeCount)
                 .hasBookmarked(bookmarkedFlag)
-                .likeCount(0L)
                 .tags(p.getHashtag().stream().map(PostHashtag::getHashtag).toList())
                 .isAuthor(authorFlag)
                 .rating(rating)

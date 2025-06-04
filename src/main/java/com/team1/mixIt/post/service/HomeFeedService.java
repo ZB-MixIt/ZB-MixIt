@@ -4,11 +4,14 @@ import com.team1.mixIt.actionlog.repository.ActionLogRepository;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.response.HomeFeedResponse;
 import com.team1.mixIt.post.dto.response.PostResponse;
+import com.team1.mixIt.post.dto.response.RatingResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.repository.PostLikeRepository;
 import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.tag.dto.response.TagStatResponse;
 import com.team1.mixIt.tag.service.TagStatsService;
+import com.team1.mixIt.user.entity.User;
+import com.team1.mixIt.user.repository.UserRepository;
 import com.team1.mixIt.utils.ImageUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -34,6 +37,8 @@ public class HomeFeedService {
     private final PostBookmarkService postBookmarkService;
     private final PostRatingService ratingService;
     private final PostLikeRepository postLikeRepository;
+    private final UserRepository userRepository;
+
 
 
     /** 홈: 카테고리별 최신 게시물 (24h -> 7d -> 30d -> 전체) */
@@ -155,30 +160,55 @@ public class HomeFeedService {
 
     /** Post -> PostResponse 변환 헬퍼 */
     private PostResponse toDto(Post p, Long currentUserId) {
-        // 포스트에 이미지 ID가 하나라도 있으면 첫 번째 ID로 실제 URL을 가져오고 아무것도 없으면 기존 defaultImageUrl 을 사용
-        String firstImageUrl;
+        // 1) 이미지 리스트(ImageDto)
+        List<PostResponse.ImageDto> imgDtos = p.getImageIds().stream()
+                .map(imageService::findById)
+                .map(img -> new PostResponse.ImageDto(img.getId(), img.getUrl()))
+                .toList();
+
+        // 2) 대표 이미지 URL: 이미지가 없으면 기본 URL
+        String defaultImageUrl;
         if (!p.getImageIds().isEmpty()) {
             Long firstImageId = p.getImageIds().get(0);
-            firstImageUrl = imageService.findById(firstImageId).getUrl();
+            defaultImageUrl = imageService.findById(firstImageId).getUrl();
         } else {
-            firstImageUrl = ImageUtils.getDefaultImageUrl();
+            defaultImageUrl = ImageUtils.getDefaultImageUrl();
         }
 
+        // 3) 좋아요 수와 현재 유저가 눌렀는지 여부
         long likeCount = postLikeRepository.countByPostId(p.getId());
-        boolean liked = postLikeRepository.findByPostIdAndUserId(p.getId(), currentUserId).isPresent();
+        boolean hasLiked = (currentUserId != null) &&
+                postLikeRepository.findByPostIdAndUserId(p.getId(), currentUserId).isPresent();
 
-        var ratingsResp = ratingService.getRatingResponse(p.getId());
+        // 4) 별점 정보
+        RatingResponse ratingResp = ratingService.getRatingResponse(p.getId());
 
+        // 5) 작성자 정보: User 엔티티에서 닉네임과 프로필 이미지 조회
+        User author = userRepository.findById(p.getUserId())
+                .orElseThrow(() -> new IllegalStateException("작성자 정보 없음"));
+        String authorNickname = author.getNickname();
+        String authorProfileImage = null;
+        if (author.getProfileImage() != null) {
+            authorProfileImage = author.getProfileImage().getUrl();
+        }
 
+        // 6) 북마크 여부
+        boolean hasBookmarked = (currentUserId != null) &&
+                postBookmarkService.isBookmarked(p.getId(), currentUserId);
+
+        // 7) 작성자 여부 판정
+        boolean isAuthor = (currentUserId != null) && p.getUserId().equals(currentUserId);
+
+        // 8) 최종 빌드
         return PostResponse.fromEntity(
                 p,
                 currentUserId,
-                firstImageUrl,
+                defaultImageUrl,
                 imageService,
                 postBookmarkService,
-                ratingsResp,
+                ratingResp,
                 likeCount,
-                liked
+                hasLiked
         );
     }
 
