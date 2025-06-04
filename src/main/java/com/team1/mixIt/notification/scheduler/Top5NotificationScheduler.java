@@ -6,7 +6,7 @@ import com.team1.mixIt.post.service.HomeFeedService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
-import org.springframework.scheduling.annotation.*;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,11 +17,12 @@ public class Top5NotificationScheduler {
     private final HomeFeedService feedService;
     private final ApplicationEventPublisher eventPublisher;
 
-    // 매일 자정
+    // 매일 자정: 오늘 인기 조회수 TOP5 알림
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
     public void notifyDailyTop5Views() {
-        Page<PostResponse> top5 = feedService.getTodayTopViewed(null,0,5);
+        // 현재UserId 없이(관리자 시점) TOP5 조회
+        Page<PostResponse> top5 = feedService.getTodayTopViewed(null, 0, 5);
         top5.forEach(dto ->
                 eventPublisher.publishEvent(new NotificationEvent(
                         this,
@@ -33,11 +34,12 @@ public class Top5NotificationScheduler {
         );
     }
 
-    // 매주 월요일 자정
+    // 매주 월요일 자정: 지난 주 인기 북마크 TOP5 알림
     @Scheduled(cron = "0 0 0 * * MON")
     @Transactional
     public void notifyWeeklyTop5Bookmarks() {
-        Page<PostResponse> top5 = feedService.getWeeklyTopBookmarked(null, 0,5);
+        // currentUserId 없이(관리자 시점) 지난 주 인기 북마크 TOP5 조회
+        Page<PostResponse> top5 = feedService.getWeeklyTopBookmarked(null, 0, 5);
         top5.forEach(dto ->
                 eventPublisher.publishEvent(new NotificationEvent(
                         this,
