@@ -11,10 +11,7 @@ import com.team1.mixIt.tag.dto.response.TagStatResponse;
 import com.team1.mixIt.tag.service.TagStatsService;
 import com.team1.mixIt.utils.ImageUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,20 +32,28 @@ public class HomeFeedService {
     private final PostRatingService ratingService;
     private final PostLikeRepository postLikeRepository;
 
-    /** ── 카테고리별 최신 게시물 (24h -> 7d -> 30d -> 전체) ── */
+    /**
+     * 홈: 카테고리별 최신 게시물 (24h → 7d → 30d → 전체)
+     */
     @Transactional(readOnly = true)
-    public Page<PostResponse> getHomeByCategory(Long currentUserId, String category, int page, int size) {
+    public Page<PostResponse> getHomeByCategory(
+            Long currentUserId,
+            String category,
+            int page,
+            int size
+    ) {
         Pageable pg = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Post> p24  = findByCreatedAfter(category, pg, Duration.ofHours(24));
+
+        Page<Post> p24 = findByCreatedAfter(category, pg, Duration.ofHours(24));
         if (p24.getNumberOfElements() == size) return mapPosts(p24, currentUserId);
 
-        Page<Post> p7d  = findByCreatedAfter(category, pg, Duration.ofDays(7));
+        Page<Post> p7d = findByCreatedAfter(category, pg, Duration.ofDays(7));
         if (p7d.getNumberOfElements() == size) return mapPosts(p7d, currentUserId);
 
         Page<Post> p30d = findByCreatedAfter(category, pg, Duration.ofDays(30));
         if (p30d.hasContent()) return mapPosts(p30d, currentUserId);
 
-        // fallback: 전체기간 조회
+        // fallback: 전체기간 동일 Pageable
         Page<Post> all = postRepository.findAll(
                 (root, q, cb) -> cb.equal(root.get("category"), category),
                 pg
@@ -56,7 +61,11 @@ public class HomeFeedService {
         return mapPosts(all, currentUserId);
     }
 
-    private Page<Post> findByCreatedAfter(String category, Pageable pg, Duration ago) {
+    private Page<Post> findByCreatedAfter(
+            String category,
+            Pageable pg,
+            Duration ago
+    ) {
         LocalDateTime since = LocalDateTime.now().minus(ago);
         return postRepository.findAll(
                 (root, q, cb) -> cb.and(
@@ -67,68 +76,193 @@ public class HomeFeedService {
         );
     }
 
-    /** ── 오늘의 인기 조회수 TopN (VIEW 집계) ── */
+    /**
+     * 홈: 오늘의 인기 조회수 TopN
+     *   • sortBy = "latest"  → createdAt 기준 정렬
+     *   • sortBy = "popular" → 좋아요(likeCount) 기준 정렬
+     */
     @Transactional(readOnly = true)
-    public Page<PostResponse> getTodayTopViewed(Long currentUserId, int page, int size) {
-        Pageable pg = PageRequest.of(page, size, Sort.unsorted());
-        Page<PostResponse> today = aggregateByAction("VIEW", Duration.ofDays(1), pg, currentUserId);
+    public Page<PostResponse> getTodayTopViewed(
+            Long currentUserId,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir
+    ) {
+        Sort sort;
+        if ("popular".equalsIgnoreCase(sortBy)) {
+            // 인기순(좋아요 수)
+            sort = Sort.by(Sort.Direction.fromString(sortDir), "likeCount");
+        } else {
+            // 최신순(createdAt)
+            sort = Sort.by(Sort.Direction.fromString(sortDir), "createdAt");
+        }
+
+        Pageable pg = PageRequest.of(page, size, sort);
+
+        // 1) 오늘(1일) 기준 조회수 집계
+        Page<PostResponse> today = aggregateByAction(
+                "VIEW",
+                Duration.ofDays(1),
+                pg,
+                currentUserId
+        );
         if (today.getNumberOfElements() == size) return today;
 
-        Page<PostResponse> week  = aggregateByAction("VIEW", Duration.ofDays(7), pg, currentUserId);
+        // 2) 7일 집계
+        Page<PostResponse> week = aggregateByAction(
+                "VIEW",
+                Duration.ofDays(7),
+                pg,
+                currentUserId
+        );
         if (week.getNumberOfElements() == size) return week;
 
-        Page<PostResponse> month = aggregateByAction("VIEW", Duration.ofDays(30), pg, currentUserId);
+        // 3) 30일 집계
+        Page<PostResponse> month = aggregateByAction(
+                "VIEW",
+                Duration.ofDays(30),
+                pg,
+                currentUserId
+        );
         if (month.hasContent()) return month;
 
-        // fallback: 전체 viewCount 기준 정렬
-        return postRepository.findAll(
-                PageRequest.of(page, size, Sort.by("viewCount").descending())
-        ).map(p -> toDto(p, currentUserId));
+        // 4) fallback: 전체 viewCount 기준 (정렬 기준=sort)
+        return postRepository.findAll(PageRequest.of(page, size, sort))
+                .map(p -> toDto(p, currentUserId));
     }
 
-    /** ── 주간 인기 조회수 TopN ── */
+    /**
+     * 홈: 주간 인기 조회수 TopN (최근 7일만, 순서 고정)
+     */
     @Transactional(readOnly = true)
-    public Page<PostResponse> getWeeklyTopViewed(Long currentUserId, int page, int size) {
-        return aggregateByAction("VIEW", Duration.ofDays(7),
-                PageRequest.of(page, size, Sort.unsorted()), currentUserId);
+    public Page<PostResponse> getWeeklyTopViewed(
+            Long currentUserId,
+            int page,
+            int size
+    ) {
+        return aggregateByAction(
+                "VIEW",
+                Duration.ofDays(7),
+                PageRequest.of(page, size, Sort.by("viewCount").descending()),
+                currentUserId
+        );
     }
 
-    /** ── 오늘의 인기 북마크 TopN (BOOKMARK 집계) ── */
+    /**
+     * 홈: 인기 조합 더보기 (사실상 getTodayTopViewed와 동일 서명)
+     */
     @Transactional(readOnly = true)
-    public Page<PostResponse> getTodayTopBookmarked(Long currentUserId, int page, int size) {
-        Pageable pg = PageRequest.of(page, size, Sort.unsorted());
-        Page<PostResponse> today = aggregateByAction("BOOKMARK", Duration.ofDays(1), pg, currentUserId);
+    public Page<PostResponse> getPopularCombos(
+            Long currentUserId,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir
+    ) {
+        return getTodayTopViewed(currentUserId, page, size, sortBy, sortDir);
+    }
+
+    /**
+     * 홈: 오늘의 추천 북마크 TopN
+     *   • sortBy = "latest"  → createdAt 기준 정렬
+     *   • sortBy = "popular" → 좋아요(likeCount) 기준 정렬
+     */
+    @Transactional(readOnly = true)
+    public Page<PostResponse> getTodayTopBookmarked(
+            Long currentUserId,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir
+    ) {
+        Sort sort;
+        if ("popular".equalsIgnoreCase(sortBy)) {
+            sort = Sort.by(Sort.Direction.fromString(sortDir), "likeCount");
+        } else {
+            sort = Sort.by(Sort.Direction.fromString(sortDir), "createdAt");
+        }
+
+        Pageable pg = PageRequest.of(page, size, sort);
+
+        // 1) 오늘(1일) 북마크 집계
+        Page<PostResponse> today = aggregateByAction(
+                "BOOKMARK",
+                Duration.ofDays(1),
+                pg,
+                currentUserId
+        );
         if (today.getNumberOfElements() == size) return today;
 
-        Page<PostResponse> week  = aggregateByAction("BOOKMARK", Duration.ofDays(7), pg, currentUserId);
+        // 2) 7일 집계
+        Page<PostResponse> week = aggregateByAction(
+                "BOOKMARK",
+                Duration.ofDays(7),
+                pg,
+                currentUserId
+        );
         if (week.getNumberOfElements() == size) return week;
 
-        Page<PostResponse> month = aggregateByAction("BOOKMARK", Duration.ofDays(30), pg, currentUserId);
+        // 3) 30일 집계
+        Page<PostResponse> month = aggregateByAction(
+                "BOOKMARK",
+                Duration.ofDays(30),
+                pg,
+                currentUserId
+        );
         if (month.hasContent()) return month;
 
-        // fallback: 전체 bookmarkCount 기준 정렬
-        return postRepository.findAll(
-                PageRequest.of(page, size, Sort.by("bookmarkCount").descending())
-        ).map(p -> toDto(p, currentUserId));
+        // 4) fallback: 전체 bookmarkCount 기준 (정렬 기준=sort)
+        return postRepository.findAll(PageRequest.of(page, size, sort))
+                .map(p -> toDto(p, currentUserId));
     }
 
-    /** ── 주간 인기 북마크 TopN ── */
+    /**
+     * 홈: 주간 인기 북마크 TopN (최근 7일만)
+     */
     @Transactional(readOnly = true)
-    public Page<PostResponse> getWeeklyTopBookmarked(Long currentUserId, int page, int size) {
-        return aggregateByAction("BOOKMARK", Duration.ofDays(7),
-                PageRequest.of(page, size, Sort.unsorted()), currentUserId);
+    public Page<PostResponse> getWeeklyTopBookmarked(
+            Long currentUserId,
+            int page,
+            int size
+    ) {
+        return aggregateByAction(
+                "BOOKMARK",
+                Duration.ofDays(7),
+                PageRequest.of(page, size, Sort.by("bookmarkCount").descending()),
+                currentUserId
+        );
     }
 
-    /** ── 추천 탭: 오늘 북마크 Top + 인기 태그 ── */
+    /**
+     * 홈: 추천 탭 (오늘 북마크된 게시물 + 인기 태그 Top10)
+     *   • sortBy = "latest"  → createdAt
+     *   • sortBy = "popular" → likeCount
+     */
     @Transactional(readOnly = true)
-    public HomeFeedResponse getTodayRecommendations(Long currentUserId, int page, int size) {
-        Page<PostResponse> posts = getTodayTopBookmarked(currentUserId, page, size);
+    public HomeFeedResponse getTodayRecommendations(
+            Long currentUserId,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir
+    ) {
+        Page<PostResponse> posts = getTodayTopBookmarked(
+                currentUserId, page, size, sortBy, sortDir
+        );
         List<TagStatResponse> tags = tagStatsService.getTopTags(10);
         return new HomeFeedResponse(posts, tags);
     }
 
-    /** ── VIEW/BOOKMARK action 집계 후 PostResponse로 매핑 ── */
-    private Page<PostResponse> aggregateByAction(String action, Duration ago, Pageable pg, Long currentUserId) {
+    /**
+     * action 로그(VIEW/BOOKMARK) 집계 후 Page<PostResponse>로 매핑
+     */
+    private Page<PostResponse> aggregateByAction(
+            String action,
+            Duration ago,
+            Pageable pg,
+            Long currentUserId
+    ) {
         LocalDateTime start = LocalDate.now().atStartOfDay().minus(ago.minusDays(1));
         LocalDateTime end   = LocalDate.now().atStartOfDay().plusDays(1);
 
@@ -141,37 +275,50 @@ public class HomeFeedService {
         return ids.map(id -> toDto(postRepository.findById(id).orElseThrow(), currentUserId));
     }
 
-    /** ── Post → PostResponse 변환 헬퍼 ── */
+    /**
+     * Post → PostResponse 변환 헬퍼
+     *   • authorNickname
+     *   • authorProfileImage
+     *   • rating (avg, count)
+     *   • hasLiked, likeCount
+     */
     private PostResponse toDto(Post p, Long currentUserId) {
-        // 대표 이미지 URL 결정
+        // 1) 대표 이미지 URL
         String firstImageUrl = !p.getImageIds().isEmpty()
                 ? imageService.findById(p.getImageIds().get(0)).getUrl()
                 : ImageUtils.getDefaultImageUrl();
 
-        // 좋아요 개수
+        // 2) 좋아요 개수
         long likeCount = postLikeRepository.countByPostId(p.getId());
 
-        // 현재 사용자가 좋아요했는지
-        boolean hasLiked = currentUserId != null
-                && postLikeRepository.findByPostIdAndUserId(p.getId(), currentUserId).isPresent();
+        // 3) 현재 사용자가 좋아요했는지
+        boolean hasLiked = false;
+        if (currentUserId != null) {
+            hasLiked = postLikeRepository.findByPostIdAndUserId(p.getId(), currentUserId).isPresent();
+        }
 
-        // 현재 사용자가 북마크했는지
-        boolean hasBookmarked = currentUserId != null
-                && postBookmarkService.isBookmarked(p.getId(), currentUserId);
+        // 4) 현재 사용자가 북마크했는지
+        boolean hasBookmarked = false;
+        if (currentUserId != null) {
+            hasBookmarked = postBookmarkService.isBookmarked(p.getId(), currentUserId);
+        }
 
-        // 별점 정보 (Service에서 반환하는 BigDecimal 기반 DTO → 내부 DTO로 변환)
-        com.team1.mixIt.post.dto.response.RatingResponse extRating = ratingService.getRatingResponse(p.getId());
-        // BigDecimal → Double 변환 (null 체크 포함)
+        // 5) 별점 정보(BigDecimal → Double)
+        com.team1.mixIt.post.dto.response.RatingResponse extRating
+                = ratingService.getRatingResponse(p.getId());
         Double avg = (extRating.getAverageRating() != null)
                 ? extRating.getAverageRating().doubleValue()
                 : 0.0;
         long cnt = extRating.getRatingCount();
-        PostResponse.RatingResponse ratingResp = new PostResponse.RatingResponse(avg, cnt);
+        PostResponse.RatingResponse ratingResp =
+                new PostResponse.RatingResponse(avg, cnt);
 
-        // 작성자 프로필 이미지 URL
-        String authorProfileUrl = (p.getUser().getProfileImageId() != null)
-                ? imageService.findById(p.getUser().getProfileImageId()).getUrl()
-                : null;
+        // 6) 작성자 프로필 이미지 URL
+        String authorProfileUrl = null;
+        if (p.getUser().getProfileImageId() != null) {
+            authorProfileUrl = imageService
+                    .findById(p.getUser().getProfileImageId()).getUrl();
+        }
 
         return PostResponse.fromEntity(
                 p,
@@ -185,7 +332,7 @@ public class HomeFeedService {
         );
     }
 
-    /** ── Page<Post> → Page<PostResponse> 매핑 헬퍼 ── */
+    /** Page<Post> → Page<PostResponse> 매핑 헬퍼 */
     private Page<PostResponse> mapPosts(Page<Post> posts, Long currentUserId) {
         return posts.map(p -> toDto(p, currentUserId));
     }
