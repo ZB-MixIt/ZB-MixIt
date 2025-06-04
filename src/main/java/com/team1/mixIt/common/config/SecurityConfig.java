@@ -2,6 +2,7 @@ package com.team1.mixIt.common.config;
 
 import com.team1.mixIt.common.filter.JwtAuthenticationFilter;
 import com.team1.mixIt.common.filter.LoggingFilter;
+import com.team1.mixIt.common.handler.JwtAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +27,8 @@ import java.util.List;
 public class SecurityConfig {
     private final AuthenticationProvider authenticationProvider;
     private final JwtAuthenticationFilter authenticationFilter;
+    private final JwtAuthenticationEntryPoint authenticationEntryPoint;
+
     private static final String[] AUTH_WHITELIST = {
             "/api/v1/login",
             "/api/v1/auth/kakao/callback",
@@ -44,6 +47,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/home/category/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/home/bookmarks").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/home/recommendations/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/posts/*/like").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/posts").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/posts/*/reviews").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/v1/accounts/password").authenticated()
@@ -55,6 +59,9 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new LoggingFilter(), JwtAuthenticationFilter.class)
+                .exceptionHandling(handler -> handler
+                .authenticationEntryPoint(authenticationEntryPoint)
+                 )
                 .authenticationProvider(authenticationProvider)
                 .sessionManagement(customizer -> customizer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .formLogin(AbstractHttpConfigurer::disable)
