@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -97,5 +98,18 @@ public class User extends BaseEntity implements UserDetails  {
     // 편의상 메서드 추가
     public Long getProfileImageId() {
         return profileImage != null ? profileImage.getId() : null;
+    }
+
+    public void delete() {
+        this.loginId = UUID.randomUUID().toString().substring(0, 10);
+        this.password = null;
+        this.name = UUID.randomUUID().toString();
+        this.email = UUID.randomUUID().toString();
+        this.profileImage = null;
+        this.social = null;
+        this.socialUserId = null;
+        this.socialLink = null;
+        this.birthdate = null;
+        this.nickname = "탈퇴한사용자";
     }
 }

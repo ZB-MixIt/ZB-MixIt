@@ -103,6 +103,17 @@ public class UserAccountController {
         return ResponseTemplate.ok();
     }
 
+    @DeleteMapping
+    @Operation(
+            summary = "Delete Account",
+            description = "계정 삭제"
+    )
+    public ResponseTemplate<Void> deleteAccount(@AuthenticationPrincipal User user) {
+        userAccountService.deleteAccount(user);
+        return ResponseTemplate.ok();
+    }
+
+
     @RequireOneParam
     @Getter
     @Builder

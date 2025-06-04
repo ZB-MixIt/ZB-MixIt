@@ -107,4 +107,10 @@ public class UserAccountService {
         // Todo Exception 발생 가능성 존재 DateTimeException
         return LocalDate.of((yy > 50) ? (1900+yy) : 2000 + yy, mm, dd);
     }
+
+    public void deleteAccount(User user) {
+        user = userRepository.findById(user.getId()).orElseThrow(() -> new ClientException(ResponseCode.USER_NOT_FOUND));
+        user.delete();
+        userRepository.save(user);
+    }
 }
