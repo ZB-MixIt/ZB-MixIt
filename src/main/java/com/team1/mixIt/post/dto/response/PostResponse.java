@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.boot.autoconfigure.graphql.ConditionalOnGraphQlSchema;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,6 +24,9 @@ public class PostResponse {
 
     @Schema(description = "작성자 ID", example = "1")
     private Long userId;
+
+    @Schema(description = "작성자 닉네임", example = "gleetest")
+    private String authorNickname;
 
     @Schema(description = "작성자 프로필 이미지 URL", example = "https://s3.bucket/profile.jpg")
     private String authorProfileImage;
@@ -45,7 +49,7 @@ public class PostResponse {
     @Schema(description = "조회수", example = "0")
     private Integer viewCount;
 
-    @Schema(description = "현재 사용자가 이 게시물을 좋아요한 상태인지", example = "true")
+    @Schema(description = "현재 사용자가 이 게시물을 좋아요한 상태", example = "true")
     private Boolean hasLiked;
 
     @Schema(description = "현재 사용자가 이 게시물을 북마크한 상태인지", example = "true")
@@ -95,9 +99,12 @@ public class PostResponse {
             String defaultImageUrl,
             ImageService imageService,
             PostBookmarkService bookmarkService,
-            RatingResponse rating
+            RatingResponse rating,
+            Long likeCount,
+            Boolean hasLiked
 
-    ) {
+
+            ) {
         // 기존 이미지
         List<ImageDto> imgDtos = p.getImageIds().stream()
                 .map(imageService::findById)
@@ -119,9 +126,13 @@ public class PostResponse {
             profileUrl = imageService.findById(profileImageId).getUrl();
         }
 
+        String nickname = p.getUser().getNickname();
+
+
         return PostResponse.builder()
                 .id(p.getId())
                 .userId(p.getUserId())
+                .authorNickname(nickname)
                 .category(p.getCategory())
                 .title(p.getTitle())
                 .content(p.getContent())
@@ -129,7 +140,8 @@ public class PostResponse {
                 .defaultImage(def)
                 .viewCount(p.getViewCount())
                 .bookmarkCount(p.getBookmarkCount())
-                .hasLiked(false)
+                .hasLiked(hasLiked)
+                .likeCount(likeCount)
                 .hasBookmarked(bookmarkedFlag)
                 .likeCount(0L)
                 .tags(p.getHashtag().stream().map(PostHashtag::getHashtag).toList())

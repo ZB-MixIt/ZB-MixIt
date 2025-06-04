@@ -65,13 +65,20 @@ public class PostSearchServiceImpl implements PostSearchService {
         return postRepository.findAll(spec, pageable)
                 .map(p -> {
                     RatingResponse rating = ratingService.getRatingResponse(p.getId());
+
+                    long likeCount = 0L;
+                    boolean hasLiked = false;
+
                     return PostResponse.fromEntity(
                             p,
                             null,
                             defaultImageUrl,
                             imageService,
                             postBookmarkService,
-                            rating
+                            rating,
+                            likeCount,
+                            hasLiked
+
                     );
                 });
     }

@@ -101,7 +101,7 @@ public class PostService {
             RatingResponse rating = ratingService.getRatingResponse(postId);
 
             // DTO 변환
-            PostResponse dto = PostResponse.fromEntity(p, currentUserId, defaultImageUrl, imageService, bookmarkService, rating);
+            PostResponse dto = PostResponse.fromEntity(p, currentUserId, defaultImageUrl, imageService, bookmarkService, rating, likeCnt, hasLiked );
             dto.setHasLiked(hasLiked);
             dto.setLikeCount(likeCnt);
 
@@ -154,7 +154,7 @@ public class PostService {
             long cnt = postLikeRepository.countByPostId(p.getId());
 
             RatingResponse rating = ratingService.getRatingResponse(p.getId());
-            PostResponse dto = PostResponse.fromEntity(p, currentUserId, defaultImageUrl, imageService, postBookmarkService, rating);
+            PostResponse dto = PostResponse.fromEntity(p, currentUserId, defaultImageUrl, imageService, postBookmarkService, rating, cnt, liked);
 
             dto.setHasLiked(liked);
             dto.setLikeCount(cnt);

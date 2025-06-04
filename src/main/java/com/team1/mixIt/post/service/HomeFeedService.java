@@ -5,6 +5,7 @@ import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.response.HomeFeedResponse;
 import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.entity.Post;
+import com.team1.mixIt.post.repository.PostLikeRepository;
 import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.tag.dto.response.TagStatResponse;
 import com.team1.mixIt.tag.service.TagStatsService;
@@ -32,6 +33,8 @@ public class HomeFeedService {
     private final ImageService imageService;
     private final PostBookmarkService postBookmarkService;
     private final PostRatingService ratingService;
+    private final PostLikeRepository postLikeRepository;
+
 
     /** 홈: 카테고리별 최신 게시물 (24h -> 7d -> 30d -> 전체) */
     @Transactional(readOnly = true)
@@ -161,13 +164,21 @@ public class HomeFeedService {
             firstImageUrl = ImageUtils.getDefaultImageUrl();
         }
 
+        long likeCount = postLikeRepository.countByPostId(p.getId());
+        boolean liked = postLikeRepository.findByPostIdAndUserId(p.getId(), currentUserId).isPresent();
+
+        var ratingsResp = ratingService.getRatingResponse(p.getId());
+
+
         return PostResponse.fromEntity(
                 p,
                 currentUserId,
                 firstImageUrl,
                 imageService,
                 postBookmarkService,
-                ratingService.getRatingResponse(p.getId())
+                ratingsResp,
+                likeCount,
+                liked
         );
     }
 
