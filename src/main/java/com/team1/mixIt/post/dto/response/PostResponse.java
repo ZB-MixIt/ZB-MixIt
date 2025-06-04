@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.boot.autoconfigure.graphql.ConditionalOnGraphQlSchema;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,7 +19,6 @@ import java.util.List;
 @Builder
 @Schema(description = "게시판 응답 DTO")
 public class PostResponse {
-
     @Schema(description = "게시물 고유 ID", example = "1")
     private Long id;
 
@@ -31,7 +31,7 @@ public class PostResponse {
     @Schema(description = "작성자 프로필 이미지 URL", example = "https://s3.bucket/profile.jpg")
     private String authorProfileImage;
 
-    @Schema(description = "카테고리", example = "CAFE")
+    @Schema(description = "카테고리", example = "카페")
     private Category category;
 
     @Schema(description = "게시물 제목", example = "게시물 제목")
@@ -52,11 +52,11 @@ public class PostResponse {
     @Schema(description = "현재 사용자가 이 게시물을 좋아요한 상태", example = "true")
     private Boolean hasLiked;
 
-    @Schema(description = "좋아요 수", example = "0")
-    private Long likeCount;
-
     @Schema(description = "현재 사용자가 이 게시물을 북마크한 상태인지", example = "true")
     private Boolean hasBookmarked;
+
+    @Schema(description = "좋아요 수", example = "0")
+    private Long likeCount;
 
     @Schema(description = "북마크 수", example = "0")
     private Integer bookmarkCount;
@@ -93,11 +93,6 @@ public class PostResponse {
         }
     }
 
-    /**
-     * Entity → DTO 변환 메서드
-     * 마지막에 하드코딩된 좋아요 개수(0L)나 hasLiked(false)를 제거하고,
-     * 호출부에서 넘겨준 likeCount, hasLiked 값을 그대로 사용합니다.
-     */
     public static PostResponse fromEntity(
             Post p,
             Long currentUserId,
@@ -107,47 +102,52 @@ public class PostResponse {
             RatingResponse rating,
             Long likeCount,
             Boolean hasLiked
-    ) {
-        // 1) 첨부 이미지 목록 생성
+
+
+            ) {
+        // 기존 이미지
         List<ImageDto> imgDtos = p.getImageIds().stream()
                 .map(imageService::findById)
                 .map(img -> new ImageDto(img.getId(), img.getUrl()))
                 .toList();
 
-        // 2) 작성자 닉네임
-        String nickname = p.getUser().getNickname();
+        // 대표이미지
+        String def = defaultImageUrl;
 
-        // 3) 북마크 여부
+        // 작성자 여부, 북마크 여부
+        boolean authorFlag = currentUserId != null && p.getUserId().equals(currentUserId);
+
         boolean bookmarkedFlag = bookmarkService.isBookmarked(p.getId(), currentUserId);
 
-        // 4) 작성자 프로필 이미지 URL
+        //프로필 이미지
         String profileUrl = null;
-        if (p.getUser().getProfileImageId() != null) {
-            profileUrl = imageService.findById(p.getUser().getProfileImageId()).getUrl();
+        Long profileImageId = p.getUser().getProfileImageId();
+        if (profileImageId != null) {
+            profileUrl = imageService.findById(profileImageId).getUrl();
         }
 
-        // 5) 작성자 본인 여부
-        boolean authorFlag = (currentUserId != null && p.getUserId().equals(currentUserId));
+        String nickname = p.getUser().getNickname();
 
-        // 6) 빌더로 최종 응답 객체 생성
+
         return PostResponse.builder()
                 .id(p.getId())
                 .userId(p.getUserId())
                 .authorNickname(nickname)
-                .authorProfileImage(profileUrl)
                 .category(p.getCategory())
                 .title(p.getTitle())
                 .content(p.getContent())
                 .images(imgDtos)
-                .defaultImage(defaultImageUrl)
+                .defaultImage(def)
                 .viewCount(p.getViewCount())
+                .bookmarkCount(p.getBookmarkCount())
                 .hasLiked(hasLiked)
                 .likeCount(likeCount)
                 .hasBookmarked(bookmarkedFlag)
-                .bookmarkCount(p.getBookmarkCount())
+                .likeCount(0L)
                 .tags(p.getHashtag().stream().map(PostHashtag::getHashtag).toList())
                 .isAuthor(authorFlag)
                 .rating(rating)
+                .authorProfileImage(profileUrl)
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getModifiedAt())
                 .build();

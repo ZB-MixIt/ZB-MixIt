@@ -6,11 +6,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-
 public interface ActionLogRepository extends JpaRepository<ActionLog, Long> {
 
-    // 오늘 조회수 로그 집계 → 조회수 순으로 포스트 ID 반환
+    // 오늘 조회수 로그를 집계해 조회수 순으로 포스트 ID 반환
     @Query("""
       SELECT a.postId
         FROM ActionLog a
@@ -25,7 +25,8 @@ public interface ActionLogRepository extends JpaRepository<ActionLog, Long> {
             Pageable pageable
     );
 
-    // 오늘 북마크 로그 집계 → 북마크 순으로 포스트 ID 반환
+
+    // 오늘 북마크 로그를 집계해 북마크 순으로 포스트 ID 반환
     @Query("""
       SELECT a.postId
         FROM ActionLog a
@@ -40,7 +41,7 @@ public interface ActionLogRepository extends JpaRepository<ActionLog, Long> {
             Pageable pageable
     );
 
-    // 주간 북마크 TOP (7일간)
+    // 주간 북마크 TOP
     @Query("""
         SELECT al.postId
           FROM ActionLog al
@@ -55,7 +56,7 @@ public interface ActionLogRepository extends JpaRepository<ActionLog, Long> {
             Pageable pageable
     );
 
-    // 지정 기간 VIEW 로그 집계 → (포스트ID, 조회수) 튜플 반환
+    // 지정 기간동안 VIEW 로그를 집계해 튜플 반환
     @Query("""
       SELECT a.postId AS postId, COUNT(a.id) AS cnt
         FROM ActionLog a
