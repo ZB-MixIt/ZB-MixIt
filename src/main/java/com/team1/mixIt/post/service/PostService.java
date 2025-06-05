@@ -270,40 +270,39 @@ public class PostService {
         assignImagesToUser(post.getImageIds(), userId);
     }
 
-    /**
-     * 기존 해시태그를 전부 삭제한 뒤,
-     * rawTags → trim → toLowerCase → 중복 제거(Set) → insert
-     */
     @Transactional
     protected void syncHashtags(Post post, List<String> rawTags) {
-        // 1) DB + 영속성 컨텍스트에서 기존 해시태그 삭제
-        hashtagRepository.deleteByPost(post);
-        post.getHashtag().clear();
-
-        if (rawTags == null || rawTags.isEmpty()) {
-            return;
-        }
-
-        // 2) 문자열 정제: null/빈문자열 제거, 앞뒤 공백 제거, 소문자화, Set으로 중복 제거
-        Set<String> cleaned = rawTags.stream()
+        Set<String> cleaned = Optional.ofNullable(rawTags).orElse(List.of()).stream()
                 .filter(Objects::nonNull)
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .map(String::toLowerCase)
                 .collect(Collectors.toSet());
 
-        if (cleaned.isEmpty()) {
-            return;
+        //현재 엔티티가 가진 해시태그 문자열 세트
+        Set<String> existing = post.getHashtag().stream()
+                .map(PostHashtag::getHashtag)
+                .collect(Collectors.toSet());
+
+        // 삭제할 건: existing에는 있는데 cleaned에는 없는 것들
+        List<PostHashtag> toDelete = post.getHashtag().stream()
+                .filter(ph -> !cleaned.contains(ph.getHashtag()))
+                .collect(Collectors.toList());
+        for (PostHashtag ph : toDelete) {
+            hashtagRepository.delete(ph);
+            post.getHashtag().remove(ph);
         }
 
-        // 3) 정제된 태그를 하나씩 insert
+        // cleaned에는 있는데 existing에는 없는 것들
         for (String tag : cleaned) {
-            PostHashtag ph = PostHashtag.builder()
-                    .post(post)
-                    .hashtag(tag)
-                    .build();
-            hashtagRepository.save(ph);
-            post.getHashtag().add(ph);
+            if (!existing.contains(tag)) {
+                PostHashtag ph = PostHashtag.builder()
+                        .post(post)
+                        .hashtag(tag)
+                        .build();
+                hashtagRepository.save(ph);
+                post.getHashtag().add(ph);
+            }
         }
     }
 
