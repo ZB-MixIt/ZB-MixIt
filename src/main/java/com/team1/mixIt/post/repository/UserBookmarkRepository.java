@@ -24,4 +24,7 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, User
             @Param("userId") Long userId,
             Pageable pageable
     );
+
+    void deleteByPostId(Long postId);
+
 }

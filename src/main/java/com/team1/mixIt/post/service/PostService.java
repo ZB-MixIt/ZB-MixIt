@@ -14,11 +14,9 @@ import com.team1.mixIt.post.dto.response.RatingResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.entity.PostHashtag;
 import com.team1.mixIt.post.entity.PostRating;
+import com.team1.mixIt.post.entity.Review;
 import com.team1.mixIt.post.enums.Category;
-import com.team1.mixIt.post.repository.PostHashtagRepository;
-import com.team1.mixIt.post.repository.PostLikeRepository;
-import com.team1.mixIt.post.repository.PostRatingRepository;
-import com.team1.mixIt.post.repository.PostRepository;
+import com.team1.mixIt.post.repository.*;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.repository.UserRepository;
 import com.team1.mixIt.utils.ImageUtils;
@@ -57,6 +55,9 @@ public class PostService {
     private final PostBookmarkService postBookmarkService;
     private final PostRatingService ratingService;
     private final PostRatingRepository postRatingRepository;
+    private final ReviewLikeRepository reviewLikeRepository;
+    private final ReviewRepository reviewRepository;
+    private final UserBookmarkRepository userBookmarkRepository;
 
     @Transactional
     public Long createPost(Long userId, PostCreateRequest req) {
@@ -252,21 +253,21 @@ public class PostService {
             throw new ClientException(ResponseCode.FORBIDDEN);
         }
 
-        // 1) 기본 필드 업데이트
+        // 기본 필드 업데이트
         post.setCategory(req.getCategory());
         post.setTitle(req.getTitle());
         post.setContent(req.getContent());
 
-        // 2) 이미지 처리
+        // 이미지 처리
         List<Long> orig = post.getImageIds();
         List<Long> updated = nonNull(req.getImageIds()) ? req.getImageIds() : List.of();
         imageService.updateAssignedImages(orig, updated);
         post.setImageIds(updated);
 
-        // 3) 해시태그 동기화
+        // 해시태그 동기화
         syncHashtags(post, req.getTags());
 
-        // 4) 이미지 소유권 재할당
+        // 이미지 소유권 재할당
         assignImagesToUser(post.getImageIds(), userId);
     }
 
@@ -306,15 +307,58 @@ public class PostService {
         }
     }
 
-    @Transactional
-    public void deletePost(Long userId, Long postId) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
-        if (!post.getUserId().equals(userId)) {
-            throw new ClientException(ResponseCode.FORBIDDEN);
-        }
-        postRepository.delete(post);
+//    @Transactional
+//    public void deletePost(Long userId, Long postId) {
+//        Post post = postRepository.findById(postId)
+//                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+//        if (!post.getUserId().equals(userId)) {
+//            throw new ClientException(ResponseCode.FORBIDDEN);
+//        }
+//        postRepository.delete(post);
+//    }
+@Transactional
+public void deletePost(Long userId, Long postId) {
+    // 포스트 존재 및 소유자 확인
+    Post post = postRepository.findById(postId)
+            .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+    if (!post.getUserId().equals(userId)) {
+        throw new ClientException(ResponseCode.FORBIDDEN);
     }
+
+    // action_log 삭제
+    actionLogRepository.deleteByPostId(postId);
+
+    // post_hashtag 삭제
+    hashtagRepository.deleteByPostId(postId);
+
+    // post_like 삭제
+    postLikeRepository.deleteByPostId(postId);
+
+    // post_rating 삭제
+    postRatingRepository.deleteByPostId(postId);
+
+    // review → review_like → review 순서로 삭제
+    //   먼저 해당 포스트에 달린 모든 리뷰의 ID를 조회
+    List<Review> reviews = reviewRepository.findByPostId(postId);
+    if (!reviews.isEmpty()) {
+        List<Long> reviewIds = reviews.stream()
+                .map(Review::getId)
+                .toList();
+
+        //   그 리뷰들에 달린 좋아요부터 삭제
+        reviewLikeRepository.deleteByReviewIdIn(reviewIds);
+
+        //   리뷰 자체를 삭제
+        reviewRepository.deleteByPostId(postId);
+    }
+
+    // user_bookmark 삭제
+    userBookmarkRepository.deleteByPostId(postId);
+
+    // 마지막으로 post 삭제
+    postRepository.delete(post);
+}
+
 
     public boolean existsById(Long postId) {
         return postRepository.existsById(postId);

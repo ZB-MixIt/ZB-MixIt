@@ -21,4 +21,6 @@ public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
     @Query("DELETE FROM PostLike pl WHERE pl.postId = :postId AND pl.userId = :userId")
     void deleteByPostIdAndUserId(@Param("postId") Long postId,
                                  @Param("userId") Long userId);
+    void deleteByPostId(Long postId);
+
 }

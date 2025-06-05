@@ -17,4 +17,8 @@ public interface ReviewLikeRepository extends JpaRepository<ReviewLike, Long> {
 
     List<ReviewLike> findAllByUserIdAndReviewIdIn(Long userId, List<Long> reviewIds);
 
+    // 리뷰 좋아요는 review_id로 삭제
+    void deleteByReviewId(Long reviewId);
+    // 만약 한 번에 여러 리뷰 ID를 한꺼번에 삭제하고 싶으면
+    void deleteByReviewIdIn(List<Long> reviewIds);
 }

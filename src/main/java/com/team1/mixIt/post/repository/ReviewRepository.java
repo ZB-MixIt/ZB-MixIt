@@ -32,4 +32,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long>, JpaSpecif
     @Override
     @EntityGraph(value = "Review.withPost", type = EntityGraph.EntityGraphType.LOAD)
     @NotNull Page<Review> findAll(@NotNull Specification<Review> spec, @NotNull Pageable pageable);
+
+    void deleteByPostId(Long postId);
+
+    // 포스트에 속한 리뷰 ID 리스트를 먼저 가져오고 싶다면
+    List<Review> findByPostId(Long postId);
 }

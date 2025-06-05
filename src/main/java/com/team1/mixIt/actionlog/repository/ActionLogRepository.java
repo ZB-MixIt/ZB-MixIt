@@ -3,10 +3,10 @@ package com.team1.mixIt.actionlog.repository;
 import com.team1.mixIt.actionlog.entity.ActionLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.*;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 public interface ActionLogRepository extends JpaRepository<ActionLog, Long> {
 
@@ -70,4 +70,6 @@ public interface ActionLogRepository extends JpaRepository<ActionLog, Long> {
             @Param("to")   LocalDateTime to,
             Pageable pageable
     );
+
+    void deleteByPostId(Long postId);
 }
