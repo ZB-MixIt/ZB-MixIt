@@ -88,6 +88,10 @@ public class ReviewService {
         Review review = reviewRepo.findByIdAndUserId(reviewId, user.getId())
                 .orElseThrow(() -> new ClientException(ResponseCode.REVIEW_NOT_FOUND));
         Post post = review.getPost();
+
+        reviewLikeRepo.deleteByReviewId(reviewId);
+
+
         reviewRepo.delete(review);
     }
 
