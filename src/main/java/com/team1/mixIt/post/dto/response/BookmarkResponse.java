@@ -9,9 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.math.BigDecimal;
 import java.util.List;
-
 @Getter
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -45,6 +43,7 @@ public class BookmarkResponse {
     @Schema(description = "북마크 수", example = "17")
     private final Integer bookmarkCount;
 
+
     @Getter
     @Builder
     @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -56,6 +55,7 @@ public class BookmarkResponse {
         @Schema(description = "이미지 URL", example = "https://.../img1.jpg")
         private final String src;
     }
+
 
     public static BookmarkResponse fromEntity(
             com.team1.mixIt.post.entity.Post post,
@@ -69,13 +69,15 @@ public class BookmarkResponse {
         String title = post.getTitle();
 
         String authorProfileImage = null;
-        Long profileImageId = post.getUser().getProfileImageId();
-        if (profileImageId != null) {
-            authorProfileImage = imageService.findById(profileImageId).getUrl();
+        com.team1.mixIt.user.entity.User author = post.getUser();
+        if (author.getProfileImage() != null) {
+            authorProfileImage = author.getProfileImage().getUrl();
         }
+        String authorNickname = author.getNickname();
+        Long authorId = author.getId();
 
-        BigDecimal avgRateBd = postRatingRepository.findAverageRateByPostId(postId);
-        Double avgRating = (avgRateBd != null) ? avgRateBd.doubleValue() : 0.0;
+        java.math.BigDecimal avgBd = postRatingRepository.findAverageRateByPostId(postId);
+        Double avgRating = (avgBd != null) ? avgBd.doubleValue() : 0.0;
 
         Boolean hasLiked = false;
         if (currentUserId != null) {
@@ -83,9 +85,9 @@ public class BookmarkResponse {
                     .findByPostIdAndUserId(postId, currentUserId)
                     .isPresent();
         }
+
         List<ImageDto> imageDtos = post.getImageIds().stream()
                 .map(imgId -> {
-                    // URL 조회 (이미지 하나당 service 호출)
                     String url = imageService.findById(imgId).getUrl();
                     return ImageDto.builder()
                             .id(imgId)
@@ -93,9 +95,6 @@ public class BookmarkResponse {
                             .build();
                 })
                 .toList();
-
-        Long authorId = post.getUserId();
-        String authorNickname = post.getUser().getNickname();
 
         Integer bookmarkCount = post.getBookmarkCount();
 

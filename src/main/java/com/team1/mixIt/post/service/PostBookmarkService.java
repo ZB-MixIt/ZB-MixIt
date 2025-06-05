@@ -14,6 +14,7 @@ import com.team1.mixIt.post.repository.PostRatingRepository;
 import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.post.repository.UserBookmarkRepository;
 import com.team1.mixIt.user.entity.User;
+import com.team1.mixIt.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -21,7 +22,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +32,7 @@ public class PostBookmarkService {
     private final ImageService imageService;
     private final PostLikeRepository postLikeRepository;
     private final PostRatingRepository postRatingRepository;
+    private final UserRepository userRepository;
 
     @Value("${mixit.default-image-url}")
     private String defaultImageUrl;
@@ -92,16 +93,16 @@ public class PostBookmarkService {
                 PageRequest.of(page, size, sort)
         );
 
-        Page<BookmarkResponse> content = ubPage.map(ub -> {
-            return BookmarkResponse.fromEntity(
-                    ub.getPost(),
-                    userId,
-                    imageService,
-                    postLikeRepository,
-                    postRatingRepository,
-                    defaultImageUrl
-            );
-        });
+        Page<BookmarkResponse> content = ubPage.map(ub ->
+                BookmarkResponse.fromEntity(
+                        ub.getPost(),
+                        userId,
+                        imageService,
+                        postLikeRepository,
+                        postRatingRepository,
+                        defaultImageUrl
+                )
+        );
 
         BookmarkResponsePage responsePage = BookmarkResponsePage.from(content);
         if (responsePage.getContent().isEmpty()) {
@@ -110,9 +111,12 @@ public class PostBookmarkService {
         return responsePage;
     }
 
+
     @Transactional(readOnly = true)
     public boolean isBookmarked(Long postId, Long userId) {
         if (userId == null) return false;
         return userBookmarkRepository.existsByIdUserIdAndIdPostId(userId, postId);
     }
 }
+
+
