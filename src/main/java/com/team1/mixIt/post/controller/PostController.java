@@ -135,30 +135,24 @@ public class PostController {
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
             @RequestPart("dto") String dtoJson,
-            @RequestPart(value = "newImages",     required = false) List<MultipartFile> newImages,
-            @RequestPart(value = "removeImageIds", required = false) String removeImageIdsJson
+            @RequestPart(value = "newImages",      required = false) List<MultipartFile> newImages,
+            @RequestPart(value = "removeImageIds", required = false) List<Long> removeImageIds
     ) throws IOException {
 
         PostUpdateRequest req = objectMapper.readValue(dtoJson, PostUpdateRequest.class);
 
-        List<Long> removeImageIds;
-        if (removeImageIdsJson == null || removeImageIdsJson.isBlank()) {
-            removeImageIds = Collections.emptyList();
-        } else {
-            removeImageIds = objectMapper.readValue(
-                    removeImageIdsJson,
-                    objectMapper.getTypeFactory().constructCollectionType(List.class, Long.class)
-            );
-        }
+        List<Long> removeIds = (removeImageIds == null)
+                ? Collections.emptyList()
+                : removeImageIds;
 
         List<Long> uploaded = validateAndUploadImages(user, newImages);
 
-        List<Long> original = req.getImageIds() != null
+        List<Long> original = (req.getImageIds() != null)
                 ? req.getImageIds()
                 : Collections.emptyList();
 
         List<Long> retained = original.stream()
-                .filter(id0 -> !removeImageIds.contains(id0)) // 삭제하지 않을 ID
+                .filter(id0 -> !removeIds.contains(id0))
                 .toList();
 
         List<Long> finalImageIds = new ArrayList<>(retained);
@@ -166,17 +160,12 @@ public class PostController {
         req.setImageIds(finalImageIds);
 
         postService.updatePost(user.getId(), id, req);
-
         PostResponse resp = postService.getPostById(
-                id,
-                user.getId(),
-                imageService,
-                bookmarkService,
-                ratingService,
-                defaultImageUrl
+                id, user.getId(), imageService, bookmarkService, ratingService, defaultImageUrl
         );
         return ResponseTemplate.ok(resp);
     }
+
 
     @Operation(summary = "게시물 삭제", description = "내가 쓴 게시물을 삭제합니다.")
     @ApiResponse(responseCode = "200", description = "삭제 성공")
