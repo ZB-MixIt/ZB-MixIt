@@ -136,7 +136,7 @@ public class PostController {
             @PathVariable Long id,
             @RequestPart("dto") String dtoJson,
             @RequestPart(value = "newImages",      required = false) List<MultipartFile> newImages,
-            @RequestPart(value = "removeImageIds", required = false) List<Long> removeImageIds
+            @RequestParam(value = "removeImageIds", required = false) List<Long> removeImageIds
     ) throws IOException {
 
         PostUpdateRequest req = objectMapper.readValue(dtoJson, PostUpdateRequest.class);

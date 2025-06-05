@@ -36,8 +36,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.nonNull;
 
@@ -63,12 +63,21 @@ public class PostService {
         Category cat = req.getCategory();
         List<Long> imageIds = nonNull(req.getImageIds()) ? req.getImageIds() : List.of();
 
-        Post post = Post.builder().userId(userId).category(cat).title(req.getTitle()).content(req.getContent()).imageIds(imageIds).build();
+        Post post = Post.builder()
+                .userId(userId)
+                .category(cat)
+                .title(req.getTitle())
+                .content(req.getContent())
+                .imageIds(imageIds)
+                .build();
         post = postRepository.save(post);
 
         // 해시태그 저장
         for (String tag : req.getTags()) {
-            PostHashtag ph = PostHashtag.builder().post(post).hashtag(tag).build();
+            PostHashtag ph = PostHashtag.builder()
+                    .post(post)
+                    .hashtag(tag.trim().toLowerCase())  // 소문자화하여 저장
+                    .build();
             hashtagRepository.save(ph);
             post.getHashtag().add(ph);
         }
@@ -83,18 +92,28 @@ public class PostService {
     }
 
     @Transactional
-    public PostResponse getPostById(Long postId, Long currentUserId, ImageService imageService, PostBookmarkService bookmarkService, PostRatingService ratingService, String defaultImageUrl) {
+    public PostResponse getPostById(Long postId,
+                                    Long currentUserId,
+                                    ImageService imageService,
+                                    PostBookmarkService bookmarkService,
+                                    PostRatingService ratingService,
+                                    String defaultImageUrl) {
         try {
             // 조회수 증가
             postRepository.increaseViewCount(postId);
 
             // 액션 로그 저장
-            actionLogRepository.save(ActionLog.builder().postId(postId).userId(currentUserId).actionType("VIEW").build());
+            actionLogRepository.save(ActionLog.builder()
+                    .postId(postId)
+                    .userId(currentUserId)
+                    .actionType("VIEW")
+                    .build());
 
-            // 연관관계(작성자, 프로필 이미지, 해시태그) 전부 Fetch Join 으로 한 방에 가져오기
-            Post p = postRepository.findWithAllById(postId).orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+            // 연관관계(작성자, 프로필 이미지, 해시태그) 전부 Fetch Join
+            Post p = postRepository.findWithAllById(postId)
+                    .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
 
-            // 좋아요 여부 수
+            // 좋아요 여부와 수
             boolean hasLiked = postLikeRepository.findByPostIdAndUserId(postId, currentUserId).isPresent();
             long likeCnt = postLikeRepository.countByPostId(postId);
 
@@ -102,12 +121,14 @@ public class PostService {
             RatingResponse rating = ratingService.getRatingResponse(postId);
 
             // DTO 변환
-            PostResponse dto = PostResponse.fromEntity(p, currentUserId, defaultImageUrl, imageService, bookmarkService, rating, likeCnt, hasLiked );
+            PostResponse dto = PostResponse.fromEntity(
+                    p, currentUserId, defaultImageUrl,
+                    imageService, bookmarkService, rating,
+                    likeCnt, hasLiked);
             dto.setHasLiked(hasLiked);
             dto.setLikeCount(likeCnt);
 
             return dto;
-
         } catch (ClientException e) {
             log.error("ID {} 게시물을 찾을 수 없습니다.", postId, e);
             throw new ClientException(ResponseCode.POST_NOT_FOUND);
@@ -117,22 +138,28 @@ public class PostService {
         }
     }
 
-    // 기본 조회
     @Transactional(readOnly = true)
     public Post getPostEntity(Long postId) {
-        return postRepository.findById(postId).orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+        return postRepository.findById(postId)
+                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
     }
 
-    // user + profileimage 동시 조회
     @Transactional(readOnly = true)
     public Post getPostWithUserAndProfile(Long postId) {
-        return postRepository.findWithUserAndProfileImageById(postId).orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+        return postRepository.findWithUserAndProfileImageById(postId)
+                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
     }
 
-
     @Transactional(readOnly = true)
-    public List<PostResponse> getAllPosts(Long currentUserId, Category category, String keyword, String sortBy, String sortDir, int page, int size) {
-        Pageable pg = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(sortDir), sortBy));
+    public List<PostResponse> getAllPosts(Long currentUserId,
+                                          Category category,
+                                          String keyword,
+                                          String sortBy,
+                                          String sortDir,
+                                          int page,
+                                          int size) {
+        Pageable pg = PageRequest.of(page, size,
+                Sort.by(Sort.Direction.fromString(sortDir), sortBy));
 
         Page<Post> posts = postRepository.findAll((root, query, cb) -> {
             List<Predicate> preds = new ArrayList<>();
@@ -153,10 +180,12 @@ public class PostService {
         return posts.stream().map(p -> {
             boolean liked = postLikeRepository.findByPostIdAndUserId(p.getId(), currentUserId).isPresent();
             long cnt = postLikeRepository.countByPostId(p.getId());
+            RatingResponse ratingResp = ratingService.getRatingResponse(p.getId());
 
-            RatingResponse rating = ratingService.getRatingResponse(p.getId());
-            PostResponse dto = PostResponse.fromEntity(p, currentUserId, defaultImageUrl, imageService, postBookmarkService, rating, cnt, liked);
-
+            PostResponse dto = PostResponse.fromEntity(
+                    p, currentUserId, defaultImageUrl,
+                    imageService, postBookmarkService, ratingResp,
+                    cnt, liked);
             dto.setHasLiked(liked);
             dto.setLikeCount(cnt);
             return dto;
@@ -165,41 +194,33 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public Page<PostResponse> getAllPosts(Long userId, Pageable pageable) {
-
         Page<Post> posts = postRepository.findAll(
                 (root, q, cb) -> cb.equal(root.get("userId"), userId),
                 pageable
         );
-
         return mapPosts(posts, userId);
     }
 
-
     private PostResponse toDto(Post p, Long currentUserId) {
-        // 1) 이미지 리스트(ImageDto)
         List<PostResponse.ImageDto> imgDtos = p.getImageIds().stream()
                 .map(imageService::findById)
                 .map(img -> new PostResponse.ImageDto(img.getId(), img.getUrl()))
                 .toList();
 
-        // 2) 대표 이미지 URL: 이미지가 없으면 기본 URL
-        String defaultImageUrl;
+        String defaultImgUrl;
         if (!p.getImageIds().isEmpty()) {
             Long firstImageId = p.getImageIds().get(0);
-            defaultImageUrl = imageService.findById(firstImageId).getUrl();
+            defaultImgUrl = imageService.findById(firstImageId).getUrl();
         } else {
-            defaultImageUrl = ImageUtils.getDefaultImageUrl();
+            defaultImgUrl = ImageUtils.getDefaultImageUrl();
         }
 
-        // 3) 좋아요 수와 현재 유저가 눌렀는지 여부
         long likeCount = postLikeRepository.countByPostId(p.getId());
         boolean hasLiked = (currentUserId != null) &&
                 postLikeRepository.findByPostIdAndUserId(p.getId(), currentUserId).isPresent();
 
-        // 4) 별점 정보
         RatingResponse ratingResp = ratingService.getRatingResponse(p.getId());
 
-        // 5) 작성자 정보: User 엔티티에서 닉네임과 프로필 이미지 조회
         User author = userRepository.findById(p.getUserId())
                 .orElseThrow(() -> new IllegalStateException("작성자 정보 없음"));
         String authorNickname = author.getNickname();
@@ -208,62 +229,92 @@ public class PostService {
             authorProfileImage = author.getProfileImage().getUrl();
         }
 
-        // 6) 북마크 여부
         boolean hasBookmarked = (currentUserId != null) &&
                 postBookmarkService.isBookmarked(p.getId(), currentUserId);
-
-        // 7) 작성자 여부 판정
         boolean isAuthor = (currentUserId != null) && p.getUserId().equals(currentUserId);
 
-        // 8) 최종 빌드
         return PostResponse.fromEntity(
-                p,
-                currentUserId,
-                defaultImageUrl,
-                imageService,
-                postBookmarkService,
-                ratingResp,
-                likeCount,
-                hasLiked
+                p, currentUserId, defaultImgUrl,
+                imageService, postBookmarkService,
+                ratingResp, likeCount, hasLiked
         );
     }
 
-    /** Page<Post> -> Page<PostResponse> 매핑 헬퍼 */
     private Page<PostResponse> mapPosts(Page<Post> posts, Long currentUserId) {
         return posts.map(p -> toDto(p, currentUserId));
     }
 
-
     @Transactional
     public void updatePost(Long userId, Long postId, PostUpdateRequest req) {
-        Post p = postRepository.findById(postId)
+        Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
-        if (!p.getUserId().equals(userId)) {
+        if (!post.getUserId().equals(userId)) {
             throw new ClientException(ResponseCode.FORBIDDEN);
         }
 
-        p.setCategory(req.getCategory());
-        p.setTitle(req.getTitle());
-        p.setContent(req.getContent());
+        // 1) 기본 필드 업데이트
+        post.setCategory(req.getCategory());
+        post.setTitle(req.getTitle());
+        post.setContent(req.getContent());
 
-        List<Long> orig = p.getImageIds();
+        // 2) 이미지 처리
+        List<Long> orig = post.getImageIds();
         List<Long> updated = nonNull(req.getImageIds()) ? req.getImageIds() : List.of();
         imageService.updateAssignedImages(orig, updated);
-        p.setImageIds(updated);
+        post.setImageIds(updated);
 
-        applyHashtags(p, req.getTags() == null ? List.of() : req.getTags());
+        // 3) 해시태그 동기화
+        syncHashtags(post, req.getTags());
 
-        assignImagesToUser(p.getImageIds(), userId);
+        // 4) 이미지 소유권 재할당
+        assignImagesToUser(post.getImageIds(), userId);
     }
 
+    /**
+     * 기존 해시태그를 전부 삭제한 뒤,
+     * rawTags → trim → toLowerCase → 중복 제거(Set) → insert
+     */
+    @Transactional
+    protected void syncHashtags(Post post, List<String> rawTags) {
+        // 1) DB + 영속성 컨텍스트에서 기존 해시태그 삭제
+        hashtagRepository.deleteByPost(post);
+        post.getHashtag().clear();
+
+        if (rawTags == null || rawTags.isEmpty()) {
+            return;
+        }
+
+        // 2) 문자열 정제: null/빈문자열 제거, 앞뒤 공백 제거, 소문자화, Set으로 중복 제거
+        Set<String> cleaned = rawTags.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
+
+        if (cleaned.isEmpty()) {
+            return;
+        }
+
+        // 3) 정제된 태그를 하나씩 insert
+        for (String tag : cleaned) {
+            PostHashtag ph = PostHashtag.builder()
+                    .post(post)
+                    .hashtag(tag)
+                    .build();
+            hashtagRepository.save(ph);
+            post.getHashtag().add(ph);
+        }
+    }
 
     @Transactional
     public void deletePost(Long userId, Long postId) {
-        Post p = postRepository.findById(postId).orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
-        if (!p.getUserId().equals(userId)) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+        if (!post.getUserId().equals(userId)) {
             throw new ClientException(ResponseCode.FORBIDDEN);
         }
-        postRepository.delete(p);
+        postRepository.delete(post);
     }
 
     public boolean existsById(Long postId) {
@@ -272,51 +323,36 @@ public class PostService {
 
     @Transactional
     public void addOrUpdateRating(Long postId, Long userId, BigDecimal rate) {
-        // 기존에 평가가 있는지 확인
-        PostRating rating = postRatingRepository.findByPostIdAndUserId(postId, userId).map(r -> {
-            r.setRate(rate);  // 기존 평점 수정
-            return r;
-        }).orElse(PostRating.builder().postId(postId).userId(userId).rate(rate).build());  // 새로운 평점 추가
+        PostRating rating = postRatingRepository.findByPostIdAndUserId(postId, userId)
+                .map(r -> {
+                    r.setRate(rate);
+                    return r;
+                })
+                .orElse(PostRating.builder()
+                        .postId(postId)
+                        .userId(userId)
+                        .rate(rate)
+                        .build());
 
-        // 평점 저장
         postRatingRepository.save(rating);
-
-        // 게시물의 평균 평점 갱신
         updatePostAvgRating(postId);
     }
 
-    // 게시물의 평균 평점을 계산하여 갱신하는 메서드
     private void updatePostAvgRating(Long postId) {
-        // 평점 평균 계산
         BigDecimal avgRate = postRatingRepository.findAverageRateByPostId(postId);
-        Post post = postRepository.findById(postId).orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
-
-        post.setAvgRating(avgRate.doubleValue());  // 평균 평점 업데이트
-        postRepository.save(post);  // 게시물 업데이트
-    }
-
-    private void applyHashtags(Post post, List<String> tags) {
-        hashtagRepository.deleteByPost(post);
-        post.getHashtag().clear();
-
-        tags.stream()
-                .filter(tag -> tag != null && !tag.isBlank())
-                .map(String::trim)
-                .distinct()
-                .forEach(tag -> {
-                    PostHashtag ph = PostHashtag.builder()
-                            .post(post)
-                            .hashtag(tag)
-                            .build();
-                    hashtagRepository.save(ph);
-                    post.getHashtag().add(ph);
-                });
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
+        post.setAvgRating(avgRate.doubleValue());
+        postRepository.save(post);
     }
 
     private void assignImagesToUser(List<Long> imageIds, Long userId) {
-        if (imageIds == null || imageIds.isEmpty()) return;
+        if (imageIds == null || imageIds.isEmpty()) {
+            return;
+        }
         List<Image> imgs = imageService.findAllById(imageIds);
         User u = userRepository.getReferenceById(userId);
         imageService.setOwner(imgs, u);
     }
+
 }
