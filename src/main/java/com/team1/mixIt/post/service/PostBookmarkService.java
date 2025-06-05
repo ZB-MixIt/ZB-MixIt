@@ -4,14 +4,18 @@ import com.team1.mixIt.actionlog.entity.ActionLog;
 import com.team1.mixIt.actionlog.repository.ActionLogRepository;
 import com.team1.mixIt.common.code.ResponseCode;
 import com.team1.mixIt.common.exception.ClientException;
+import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.response.BookmarkResponse;
 import com.team1.mixIt.post.dto.response.BookmarkResponsePage;
 import com.team1.mixIt.post.entity.UserBookmark;
 import com.team1.mixIt.post.entity.UserBookmarkId;
+import com.team1.mixIt.post.repository.PostLikeRepository;
+import com.team1.mixIt.post.repository.PostRatingRepository;
 import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.post.repository.UserBookmarkRepository;
 import com.team1.mixIt.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -24,6 +28,12 @@ public class PostBookmarkService {
     private final PostRepository postRepository;
     private final UserBookmarkRepository userBookmarkRepository;
     private final ActionLogRepository actionLogRepository;
+    private final ImageService imageService;
+    private final PostLikeRepository postLikeRepository;
+    private final PostRatingRepository postRatingRepository;
+
+    @Value("${mixit.default-image-url}")
+    private String defaultImageUrl;
 
     @Transactional
     public void addBookmark(Long postId, User user) {
@@ -81,13 +91,24 @@ public class PostBookmarkService {
                 PageRequest.of(page, size, sort)
         );
 
-        Page<BookmarkResponse> content = ubPage.map(ub ->
-                BookmarkResponse.fromEntity(ub.getPost())
-        );
-        return BookmarkResponsePage.from(content);
+        Page<BookmarkResponse> content = ubPage.map(ub -> {
+            return BookmarkResponse.fromEntity(
+                    ub.getPost(),
+                    userId,
+                    imageService,
+                    postLikeRepository,
+                    postRatingRepository,
+                    defaultImageUrl
+            );
+        });
+
+        BookmarkResponsePage responsePage = BookmarkResponsePage.from(content);
+        if (responsePage.getContent().isEmpty()) {
+            responsePage.setEmptyMessage("더 많은 조합 보러가기");
+        }
+        return responsePage;
     }
 
-    // 현재 userId가 postId를 북마크했는지 여부를 반환
     @Transactional(readOnly = true)
     public boolean isBookmarked(Long postId, Long userId) {
         if (userId == null) return false;

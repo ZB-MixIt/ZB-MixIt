@@ -1,15 +1,14 @@
 package com.team1.mixIt.post.controller;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
-import com.team1.mixIt.post.dto.response.BookmarkResponse;
 import com.team1.mixIt.post.dto.response.BookmarkResponsePage;
 import com.team1.mixIt.post.service.PostBookmarkService;
 import com.team1.mixIt.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -75,7 +74,7 @@ public class PostBookmarkController {
                  schema = @Schema(implementation = BookmarkResponsePage.class)
          )
  )
- @GetMapping("/users/me/bookmarks")
+ @GetMapping("/bookmark")
  public ResponseTemplate<BookmarkResponsePage> list(
          @AuthenticationPrincipal User user,
          @RequestParam(defaultValue = "0") int page,

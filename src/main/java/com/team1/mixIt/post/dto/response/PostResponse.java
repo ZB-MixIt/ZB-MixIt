@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.boot.autoconfigure.graphql.ConditionalOnGraphQlSchema;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -104,7 +103,7 @@ public class PostResponse {
             Boolean hasLiked
 
 
-            ) {
+    ) {
         // 기존 이미지
         List<ImageDto> imgDtos = p.getImageIds().stream()
                 .map(imageService::findById)
