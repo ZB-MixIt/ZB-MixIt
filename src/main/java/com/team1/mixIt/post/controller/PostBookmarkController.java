@@ -74,7 +74,7 @@ public class PostBookmarkController {
                  schema = @Schema(implementation = BookmarkResponsePage.class)
          )
  )
- @GetMapping("/bookmark")
+ @GetMapping("/users/me/bookmarks")
  public ResponseTemplate<BookmarkResponsePage> list(
          @AuthenticationPrincipal User user,
          @RequestParam(defaultValue = "0") int page,
