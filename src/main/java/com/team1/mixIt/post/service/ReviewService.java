@@ -111,8 +111,10 @@ public class ReviewService {
 
         return reviews.stream().map(r -> {
             ReviewResponse dto = ReviewResponse.fromEntity(r, currentUserId, imageService);
-            dto.setLikeCount(r.getLikeCount());
-            dto.setHasLiked(likedIds.contains(r.getId()));
+            long realCount = reviewLikeRepo.countByReviewId(r.getId());
+            dto.setLikeCount(realCount);
+
+            dto.setHasLiked(likedIds.contains(r.getId()));            dto.setHasLiked(likedIds.contains(r.getId()));
             return dto;
         }).toList();
     }
