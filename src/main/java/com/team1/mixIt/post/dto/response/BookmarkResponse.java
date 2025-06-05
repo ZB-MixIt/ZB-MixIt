@@ -33,8 +33,8 @@ public class BookmarkResponse {
     @Schema(description = "하트(좋아요 여부)", example = "true")
     private final Boolean hasLiked;
 
-    @Schema(description = "첨부 이미지 ID 목록", example = "[1,2,3]")
-    private final List<Long> imageIds;
+    @Schema(description = "첨부 이미지 목록 (ID + URL)", implementation = BookmarkResponse.ImageDto.class)
+    private final List<ImageDto> images;
 
     @Schema(description = "작성자 ID", example = "7")
     private final Long authorId;
@@ -44,6 +44,19 @@ public class BookmarkResponse {
 
     @Schema(description = "북마크 수", example = "17")
     private final Integer bookmarkCount;
+
+    @Getter
+    @Builder
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
+    @Schema(description = "이미지 DTO (ID + URL)")
+    public static class ImageDto {
+        @Schema(description = "이미지 고유 ID", example = "1")
+        private final Long id;
+
+        @Schema(description = "이미지 URL", example = "https://.../img1.jpg")
+        private final String src;
+    }
+
     public static BookmarkResponse fromEntity(
             com.team1.mixIt.post.entity.Post post,
             Long currentUserId,
@@ -70,8 +83,16 @@ public class BookmarkResponse {
                     .findByPostIdAndUserId(postId, currentUserId)
                     .isPresent();
         }
-
-        List<Long> imageIds = post.getImageIds();
+        List<ImageDto> imageDtos = post.getImageIds().stream()
+                .map(imgId -> {
+                    // URL 조회 (이미지 하나당 service 호출)
+                    String url = imageService.findById(imgId).getUrl();
+                    return ImageDto.builder()
+                            .id(imgId)
+                            .src(url)
+                            .build();
+                })
+                .toList();
 
         Long authorId = post.getUserId();
         String authorNickname = post.getUser().getNickname();
@@ -84,7 +105,7 @@ public class BookmarkResponse {
                 .authorProfileImage(authorProfileImage)
                 .avgRating(avgRating)
                 .hasLiked(hasLiked)
-                .imageIds(imageIds)
+                .images(imageDtos)
                 .authorId(authorId)
                 .authorNickname(authorNickname)
                 .bookmarkCount(bookmarkCount)
