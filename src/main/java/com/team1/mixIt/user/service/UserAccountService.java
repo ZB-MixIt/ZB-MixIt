@@ -87,6 +87,12 @@ public class UserAccountService {
         userRepository.save(user);
     }
 
+    public void updatePassword(String loginId, String newPwd) {
+        User user = userRepository.findByLoginId(loginId).orElseThrow();
+        user.updatePassword(passwordEncoder.encode(newPwd));
+        userRepository.save(user);
+    }
+
     public void resetPassword(String loginId, String birth, String email) {
         User user = userRepository.findByLoginId(loginId).orElseThrow(() -> new ClientException(ResponseCode.USER_NOT_FOUND));
 
@@ -96,7 +102,7 @@ public class UserAccountService {
         String newPwd = UUID.randomUUID().toString().substring(0, 8);
 
         emailService.sendPasswordResetEmail(user.getEmail(), newPwd);
-        updatePassword(loginId, user.getPassword(), newPwd);
+        updatePassword(loginId, newPwd);
     }
 
     private LocalDate convertToLocalDate(String dateStr) {
