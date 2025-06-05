@@ -136,33 +136,44 @@ public class PostController {
             @PathVariable Long id,
             @RequestPart("dto") String dtoJson,
             @RequestPart(value = "newImages",     required = false) List<MultipartFile> newImages,
-            @RequestPart(value = "removeImageIds", required = false) List<Long> removeImageIds
+            @RequestPart(value = "removeImageIds", required = false) String removeImageIdsJson
     ) throws IOException {
-        // JSON 문자열을 객체로 역직렬화
+
         PostUpdateRequest req = objectMapper.readValue(dtoJson, PostUpdateRequest.class);
 
-        // 새로 업로드된 이미지 처리
+        List<Long> removeImageIds;
+        if (removeImageIdsJson == null || removeImageIdsJson.isBlank()) {
+            removeImageIds = Collections.emptyList();
+        } else {
+            removeImageIds = objectMapper.readValue(
+                    removeImageIdsJson,
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, Long.class)
+            );
+        }
+
         List<Long> uploaded = validateAndUploadImages(user, newImages);
 
-        // 기존/삭제될 이미지 정리
         List<Long> original = req.getImageIds() != null
                 ? req.getImageIds()
                 : Collections.emptyList();
+
         List<Long> retained = original.stream()
-                .filter(id0 -> removeImageIds == null || !removeImageIds.contains(id0))
+                .filter(id0 -> !removeImageIds.contains(id0)) // 삭제하지 않을 ID
                 .toList();
 
-        // 최종 이미지 ID 리스트 세팅
         List<Long> finalImageIds = new ArrayList<>(retained);
         finalImageIds.addAll(uploaded);
         req.setImageIds(finalImageIds);
 
-        // 서비스 호출
         postService.updatePost(user.getId(), id, req);
 
-        // 업데이트된 댓글 조회 후 반환
         PostResponse resp = postService.getPostById(
-                id, user.getId(), imageService, bookmarkService, ratingService, defaultImageUrl
+                id,
+                user.getId(),
+                imageService,
+                bookmarkService,
+                ratingService,
+                defaultImageUrl
         );
         return ResponseTemplate.ok(resp);
     }
