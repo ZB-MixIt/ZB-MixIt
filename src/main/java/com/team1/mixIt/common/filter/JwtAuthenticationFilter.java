@@ -21,7 +21,6 @@ import java.io.IOException;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final HandlerExceptionResolver handlerExceptionResolver;
-
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
@@ -42,19 +41,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         String path = request.getRequestURI();
-
-        if (path.startsWith("/api/v1/home")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+        String method = request.getMethod();
 
         if (path.startsWith("/api/v1/login")
-                || path.startsWith("/api/v1/tags/popular")) {
+                || path.startsWith("/api/v1/logout")
+                || path.startsWith("/api/v1/auth/kakao")
+                || path.startsWith("/api/v1/accounts")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")) {
             filterChain.doFilter(request, response);
             return;
         }
-        final String authHeader = request.getHeader("Authorization");
 
+        if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/v1/home")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        if ("GET".equalsIgnoreCase(method)) {
+            if (path.startsWith("/api/v1/posts/")
+                    || path.equals("/api/v1/posts/search")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+        }
+
+        if ("GET".equalsIgnoreCase(method) &&
+                (path.startsWith("/api/v1/tags/popular")
+                        || path.startsWith("/api/v1/tags/autocomplete"))) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        final String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
