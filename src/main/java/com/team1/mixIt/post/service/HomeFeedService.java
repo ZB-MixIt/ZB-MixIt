@@ -40,30 +40,79 @@ public class HomeFeedService {
     private final UserRepository userRepository;
 
 
-
-    /** 홈: 카테고리별 최신 게시물 (24h -> 7d -> 30d -> 전체) */
+    /**
+     * 홈: 카테고리별 최신 게시물 (24h -> 7d -> 30d -> 전체)
+     */
     @Transactional(readOnly = true)
-    public Page<PostResponse> getHomeByCategory(Long currentUserId, String category, int page, int size) {
+    public Page<PostResponse> getHomeByCategory(
+            Long currentUserId,
+            String category,
+            int page,
+            int size,
+            String forceWindow
+    ) {
+        Duration window;
+        if (forceWindow == null) {
+            window = pickWindow(category, size);
+        } else {
+            window = switch (forceWindow) {
+                case "24h" -> Duration.ofHours(24);
+                case "7d" -> Duration.ofDays(7);
+                case "30d" -> Duration.ofDays(30);
+                default -> null; // null이면 전체
+            };
+        }
+
+        // 한 번 결정된 기간으로 전체 페이징 조회 -> page랑 size만 변경
         Pageable pg = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<Post> posts;
+        if (window != null) {
+            LocalDateTime since = LocalDateTime.now().minus(window);
+            posts = postRepository.findAll(
+                    (root, q, cb) -> cb.and(
+                            cb.equal(root.get("category"), category),
+                            cb.greaterThanOrEqualTo(root.get("createdAt"), since)
+                    ),
+                    pg
+            );
+        } else {
+            // null ->? 전체 기간
+            posts = postRepository.findAll(
+                    (root, q, cb) -> cb.equal(root.get("category"), category),
+                    pg
+            );
+        }
 
-        Page<Post> p24 = findByCreatedAfter(category, pg, Duration.ofHours(24));
-        if (p24.getNumberOfElements() == size) return mapPosts(p24, currentUserId);
-
-        Page<Post> p7d = findByCreatedAfter(category, pg, Duration.ofDays(7));
-        if (p7d.getNumberOfElements() == size) return mapPosts(p7d, currentUserId);
-
-        Page<Post> p30d = findByCreatedAfter(category, pg, Duration.ofDays(30));
-        if (p30d.hasContent()) return mapPosts(p30d, currentUserId);
-
-        // fallback: 전체기간 동일 Pageable
-        Page<Post> all = postRepository.findAll(
-                (root, q, cb) -> cb.equal(root.get("category"), category),
-                pg
-        );
-        return mapPosts(all, currentUserId);
+        return mapPosts(posts, currentUserId);
     }
 
-    private Page<Post> findByCreatedAfter(String category, Pageable pg, Duration ago) {
+    private Duration pickWindow(String category, int size) {
+        // 24시간
+        Page<Post> p24 = findByCreatedAfter(category, 0, size, Duration.ofHours(24));
+        if (p24.getNumberOfElements() == size) {
+            return Duration.ofHours(24);
+        }
+
+        // 7일
+        Page<Post> p7d = findByCreatedAfter(category, 0, size, Duration.ofDays(7));
+        if (p7d.getNumberOfElements() == size) {
+            return Duration.ofDays(7);
+        }
+
+        // 30일
+        Page<Post> p30d = findByCreatedAfter(category, 0, size, Duration.ofDays(30));
+        if (p30d.hasContent()) {
+            return Duration.ofDays(30);
+        }
+
+        // 그 외에는 전체
+        return null;
+    }
+
+    private Page<Post> findByCreatedAfter(
+            String category, int page, int size, Duration ago
+    ) {
+        Pageable pg = PageRequest.of(page, size, Sort.by("createdAt").descending());
         LocalDateTime since = LocalDateTime.now().minus(ago);
         return postRepository.findAll(
                 (root, q, cb) -> cb.and(
@@ -74,7 +123,9 @@ public class HomeFeedService {
         );
     }
 
-    /** 홈: 오늘의 인기 조회수 TopN (1d -> 7d -> 30d -> 전체 viewCount) */
+    /**
+     * 홈: 오늘의 인기 조회수 TopN (1d -> 7d -> 30d -> 전체 viewCount)
+     */
     @Transactional(readOnly = true)
     public Page<PostResponse> getTodayTopViewed(Long currentUserId, int page, int size) {
         Pageable pg = PageRequest.of(page, size, Sort.unsorted());
@@ -94,7 +145,9 @@ public class HomeFeedService {
         ).map(p -> toDto(p, currentUserId));
     }
 
-    /** 홈: 주간 인기 조회수 TopN (최근 7일 action_log 집계) */
+    /**
+     * 홈: 주간 인기 조회수 TopN (최근 7일 action_log 집계)
+     */
     @Transactional(readOnly = true)
     public Page<PostResponse> getWeeklyTopViewed(Long currentUserId, int page, int size) {
         // 이번 주(7일) 집계만 하고, 부족해도 추가 fallback 없이 그대로 넘겨요.
@@ -102,12 +155,16 @@ public class HomeFeedService {
                 PageRequest.of(page, size, Sort.unsorted()), currentUserId);
     }
 
-    /** 홈: 인기 조합 더보기 (동일 as 오늘의 인기 조회수, but pageable) */
+    /**
+     * 홈: 인기 조합 더보기 (동일 as 오늘의 인기 조회수, but pageable)
+     */
     public Page<PostResponse> getPopularCombos(Long currentUserId, int page, int size) {
         return getTodayTopViewed(currentUserId, page, size);
     }
 
-    /** 홈: 오늘의 추천 북마크 TopN (1d -> 7d -> 30d -> 전체 bookmarkCount) */
+    /**
+     * 홈: 오늘의 추천 북마크 TopN (1d -> 7d -> 30d -> 전체 bookmarkCount)
+     */
     @Transactional(readOnly = true)
     public Page<PostResponse> getTodayTopBookmarked(Long currentUserId, int page, int size) {
         Pageable pg = PageRequest.of(page, size, Sort.unsorted());
@@ -127,14 +184,18 @@ public class HomeFeedService {
         ).map(p -> toDto(p, currentUserId));
     }
 
-    /** 홈: 주간 인기 북마크 TopN */
+    /**
+     * 홈: 주간 인기 북마크 TopN
+     */
     @Transactional(readOnly = true)
     public Page<PostResponse> getWeeklyTopBookmarked(Long currentUserId, int page, int size) {
         return aggregateByAction("BOOKMARK", Duration.ofDays(7),
                 PageRequest.of(page, size, Sort.unsorted()), currentUserId);
     }
 
-    /** 홈: 추천 탭 (오늘 북마크된 게시물 + 인기 태그 10개) */
+    /**
+     * 홈: 추천 탭 (오늘 북마크된 게시물 + 인기 태그 10개)
+     */
     @Transactional(readOnly = true)
     public HomeFeedResponse getTodayRecommendations(Long currentUserId, int page, int size) {
         Page<PostResponse> posts = getTodayTopBookmarked(currentUserId, page, size);
@@ -142,15 +203,19 @@ public class HomeFeedService {
         return new HomeFeedResponse(posts, tags);
     }
 
-    /** action 로그 집계 후 PostResponse로 매핑 (VIEW/BOOKMARK) */
-    private Page<PostResponse> aggregateByAction(String action, Duration ago, Pageable pg,       Long currentUserId) {
+    /**
+     * action 로그 집계 후 PostResponse로 매핑 (VIEW/BOOKMARK)
+     */
+    private Page<PostResponse> aggregateByAction(String action, Duration ago, Pageable pg, Long currentUserId) {
         LocalDateTime start = LocalDate.now().atStartOfDay().minus(ago.minusDays(1));
-        LocalDateTime end   = LocalDate.now().atStartOfDay().plusDays(1);
+        LocalDateTime end = LocalDate.now().atStartOfDay().plusDays(1);
 
         Page<Long> ids = switch (action) {
-            case "VIEW"     -> actionLogRepository.findTopViewedPostIds(start, end, pg);
-            case "BOOKMARK" -> actionLogRepository.findTopBookmarkedPostIds(start, end, pg);
-            default         -> Page.empty(pg);
+            case "VIEW" ->
+                    actionLogRepository.findTopViewedPostIds(start, end, pg);
+            case "BOOKMARK" ->
+                    actionLogRepository.findTopBookmarkedPostIds(start, end, pg);
+            default -> Page.empty(pg);
         };
 
         return ids.map(id -> toDto(
@@ -158,7 +223,9 @@ public class HomeFeedService {
         ));
     }
 
-    /** Post -> PostResponse 변환 헬퍼 */
+    /**
+     * Post -> PostResponse 변환 헬퍼
+     */
     private PostResponse toDto(Post p, Long currentUserId) {
         // 이미지 리스트(ImageDto)
         List<PostResponse.ImageDto> imgDtos = p.getImageIds().stream()
@@ -212,7 +279,9 @@ public class HomeFeedService {
         );
     }
 
-    /** Page<Post> -> Page<PostResponse> 매핑 헬퍼 */
+    /**
+     * Page<Post> -> Page<PostResponse> 매핑 헬퍼
+     */
     private Page<PostResponse> mapPosts(Page<Post> posts, Long currentUserId) {
         return posts.map(p -> toDto(p, currentUserId));
     }
