@@ -33,36 +33,38 @@ public class TagAutoCompleteService {
                 .build()
         );
 
-        // tag_stats에 있는 태그 + tag_search_log에만 있는 태그를 UNION
+        // 2) 두 개의 SELECT를 각각 괄호로 감싸고 UNION
         String sql = """
-            -- tag_stats에 있는 태그 우선 뽑기
-            SELECT s.tag
-              FROM tag_stats s
-              LEFT JOIN (
-                SELECT tag, COUNT(*) AS search_count
-                  FROM tag_search_log
-                 WHERE searched_at >= DATE_SUB(NOW(), INTERVAL :logDays DAY)
-                   AND tag LIKE CONCAT(:prefix, '%')
-                 GROUP BY tag
-              ) l ON s.tag = l.tag
-             WHERE s.tag LIKE CONCAT(:prefix, '%')
-             ORDER BY (s.use_count * :w1 + COALESCE(l.search_count, 0) * :w2) DESC
-             LIMIT :limit
-
+            (
+              -- tag_stats에 있는 태그 우선 뽑기
+              SELECT s.tag
+                FROM tag_stats s
+                LEFT JOIN (
+                  SELECT tag, COUNT(*) AS search_count
+                    FROM tag_search_log
+                   WHERE searched_at >= DATE_SUB(NOW(), INTERVAL :logDays DAY)
+                     AND tag LIKE CONCAT(:prefix, '%')
+                   GROUP BY tag
+                ) l ON s.tag = l.tag
+               WHERE s.tag LIKE CONCAT(:prefix, '%')
+               ORDER BY (s.use_count * :w1 + COALESCE(l.search_count, 0) * :w2) DESC
+               LIMIT :limit
+            )
             UNION
-
-            -- tag_stats에는 없지만, 최근 검색 로그에만 있는 태그
-            SELECT DISTINCT tag
-              FROM tag_search_log
-             WHERE searched_at >= DATE_SUB(NOW(), INTERVAL :logDays DAY)
-               AND tag LIKE CONCAT(:prefix, '%')
-               AND tag NOT IN (
-                   SELECT tag
-                     FROM tag_stats
-                    WHERE tag LIKE CONCAT(:prefix, '%')
-               )
-             ORDER BY searched_at DESC
-             LIMIT :limit
+            (
+              -- tag_stats에는 없지만, 최근 검색 로그에만 있는 태그
+              SELECT DISTINCT tag
+                FROM tag_search_log
+               WHERE searched_at >= DATE_SUB(NOW(), INTERVAL :logDays DAY)
+                 AND tag LIKE CONCAT(:prefix, '%')
+                 AND tag NOT IN (
+                     SELECT tag
+                       FROM tag_stats
+                      WHERE tag LIKE CONCAT(:prefix, '%')
+                 )
+               ORDER BY searched_at DESC
+               LIMIT :limit
+            )
             """;
 
         @SuppressWarnings("unchecked")
