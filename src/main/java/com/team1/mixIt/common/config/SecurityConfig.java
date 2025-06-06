@@ -60,6 +60,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/post/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/combinations/popular").permitAll()
                         .requestMatchers(HttpMethod.GET, "/combinations/recommendation").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/home/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/tags/popular").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/terms").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/posts/*/reviews").permitAll()
