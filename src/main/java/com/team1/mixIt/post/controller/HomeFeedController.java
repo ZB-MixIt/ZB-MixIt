@@ -44,13 +44,13 @@ public class HomeFeedController {
             @AuthenticationPrincipal User user,
             @PathVariable String category,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String window
     ) {
-        Long currentUserId = (user != null ? user.getId() : null);
-        Long uid = (user != null ? user.getId() : null);
-        log.info(">>> currentUserId = {}", uid);
+        Long uid = currentUserId(user);
+        log.info(">>> currentUserId = {}, window = {}", uid, window);
         return ResponseTemplate.ok(
-                feedService.getHomeByCategory(currentUserId, category, page, size)
+                feedService.getHomeByCategory(uid, category, page, size, window)
         );
     }
 

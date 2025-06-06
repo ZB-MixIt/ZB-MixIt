@@ -59,7 +59,7 @@ public class HomeFeedService {
                 case "24h" -> Duration.ofHours(24);
                 case "7d" -> Duration.ofDays(7);
                 case "30d" -> Duration.ofDays(30);
-                default -> null; // null이면 전체
+                default -> null;
             };
         }
 
