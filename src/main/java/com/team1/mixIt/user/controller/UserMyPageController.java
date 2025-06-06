@@ -53,6 +53,24 @@ public class UserMyPageController {
     }
 
     @Operation(
+            summary = "회원정보수정",
+            description = "회원정보수정 API"
+    )
+    @PutMapping
+    public ResponseTemplate<GetMyPageResponse> modifyMyPage(@AuthenticationPrincipal User user,
+                                                            @Valid @RequestBody UpdateMyPageRequest request) {
+        user = myPageService.updateMyPage(user, request);
+        return ResponseTemplate.ok(GetMyPageResponse.of(user));
+    }
+
+    public record UpdateMyPageRequest (
+            String nickname,
+            Long imageId,
+            boolean notification,
+            boolean alarm
+    ) {}
+
+    @Operation(
             summary = "Get Notification Information",
             description = "MyPage 하위 알림 정보 조회 API"
     )

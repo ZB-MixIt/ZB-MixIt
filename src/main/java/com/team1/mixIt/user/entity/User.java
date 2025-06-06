@@ -71,6 +71,14 @@ public class User extends BaseEntity implements UserDetails  {
         this.profileImage = image;
     }
 
+    public void updateNotifyOn(boolean notifyOn) {
+        this.notifyOn = notifyOn;
+    }
+
+    public void updatePushOn(boolean pushOn) {
+        this.pushOn = pushOn;
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of();
