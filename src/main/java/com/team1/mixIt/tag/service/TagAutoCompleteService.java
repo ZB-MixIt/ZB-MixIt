@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
 @Service
 @RequiredArgsConstructor
 public class TagAutoCompleteService {
@@ -26,17 +25,14 @@ public class TagAutoCompleteService {
     public List<AutoCompleteResponse> autocomplete(String prefix,
                                                    int limit,
                                                    User user) {
-        // 검색어를 로그에 남기기
         logRepo.save(TagSearchLog.builder()
                 .tag(prefix)
                 .user(user)
                 .build()
         );
 
-        // 2) 두 개의 SELECT를 각각 괄호로 감싸고 UNION
         String sql = """
             (
-              -- tag_stats에 있는 태그 우선 뽑기
               SELECT s.tag
                 FROM tag_stats s
                 LEFT JOIN (
@@ -52,18 +48,22 @@ public class TagAutoCompleteService {
             )
             UNION
             (
-              -- tag_stats에는 없지만, 최근 검색 로그에만 있는 태그
-              SELECT DISTINCT tag
-                FROM tag_search_log
-               WHERE searched_at >= DATE_SUB(NOW(), INTERVAL :logDays DAY)
-                 AND tag LIKE CONCAT(:prefix, '%')
-                 AND tag NOT IN (
-                     SELECT tag
-                       FROM tag_stats
-                      WHERE tag LIKE CONCAT(:prefix, '%')
-                 )
-               ORDER BY searched_at DESC
-               LIMIT :limit
+              SELECT t.tag
+                FROM (
+                  SELECT tag,
+                         MAX(searched_at) AS last_search
+                    FROM tag_search_log
+                   WHERE searched_at >= DATE_SUB(NOW(), INTERVAL :logDays DAY)
+                     AND tag LIKE CONCAT(:prefix, '%')
+                     AND tag NOT IN (
+                         SELECT tag
+                           FROM tag_stats
+                          WHERE tag LIKE CONCAT(:prefix, '%')
+                     )
+                   GROUP BY tag
+                   ORDER BY last_search DESC
+                   LIMIT :limit
+                ) AS t
             )
             """;
 
@@ -71,9 +71,9 @@ public class TagAutoCompleteService {
         List<String> tags = em.createNativeQuery(sql)
                 .setParameter("prefix", prefix)
                 .setParameter("limit", limit)
-                .setParameter("logDays", 3)
-                .setParameter("w1", 0.7)      // use_count 가중치
-                .setParameter("w2", 0.3)      // search_count 가중치
+                .setParameter("logDays", 3)      // 최근 3일치 검색 로그 반영
+                .setParameter("w1", 0.7)         // use_count 가중치
+                .setParameter("w2", 0.3)         // search_count 가중치
                 .getResultList();
 
         return tags.stream()
