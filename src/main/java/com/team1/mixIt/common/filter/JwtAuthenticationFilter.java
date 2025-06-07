@@ -35,6 +35,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        String method = request.getMethod();
+
+        final String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return true;
+        }
+
+        if (path.startsWith("/api/v1/login")
+                || path.startsWith("/api/v1/logout")
+                || path.startsWith("/api/v1/auth/kakao")
+                || path.startsWith("/api/v1/accounts")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs"))
+            return true;
+
+        return super.shouldNotFilter(request);
+    }
+
+    @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
@@ -43,41 +64,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String method = request.getMethod();
 
-        if (path.startsWith("/api/v1/login")
-                || path.startsWith("/api/v1/logout")
-                || path.startsWith("/api/v1/auth/kakao")
-                || path.startsWith("/api/v1/accounts")
-                || path.startsWith("/swagger-ui")
-                || path.startsWith("/v3/api-docs")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/v1/home")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        if ("GET".equalsIgnoreCase(method)) {
-            if (path.startsWith("/api/v1/posts/")
-                    || path.equals("/api/v1/posts/search")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-        }
-
-        if ("GET".equalsIgnoreCase(method) &&
-                (path.startsWith("/api/v1/tags/popular")
-                        || path.startsWith("/api/v1/tags/autocomplete"))) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+//        if (path.startsWith("/api/v1/login")
+//                || path.startsWith("/api/v1/logout")
+//                || path.startsWith("/api/v1/auth/kakao")
+//                || path.startsWith("/api/v1/accounts")
+//                || path.startsWith("/swagger-ui")
+//                || path.startsWith("/v3/api-docs")) {
+//            filterChain.doFilter(request, response);
+//            return;
+//        }
+//
+//        if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/v1/home")) {
+//            filterChain.doFilter(request, response);
+//            return;
+//        }
+//
+//        if ("GET".equalsIgnoreCase(method)) {
+//            if (path.startsWith("/api/v1/posts/")
+//                    || path.equals("/api/v1/posts/search")) {
+//                filterChain.doFilter(request, response);
+//                return;
+//            }
+//        }
+//
+//        if ("GET".equalsIgnoreCase(method) &&
+//                (path.startsWith("/api/v1/tags/popular")
+//                        || path.startsWith("/api/v1/tags/autocomplete"))) {
+//            filterChain.doFilter(request, response);
+//            return;
+//        }
 
         final String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
 
         try {
             final String jwt = authHeader.substring(7);
