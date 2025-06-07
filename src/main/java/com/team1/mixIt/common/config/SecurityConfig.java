@@ -44,7 +44,6 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(customizer -> customizer
-                        .requestMatchers(HttpMethod.GET, "/api/v1/posts/*/rate").authenticated()
                         .requestMatchers(HttpMethod.POST,   "/api/v1/posts").authenticated()
                         .requestMatchers(HttpMethod.PUT,    "/api/v1/posts/{id}").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/posts/{id}").authenticated()
@@ -55,13 +54,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,   "/api/v1/posts/*/reviews").authenticated()
                         .requestMatchers(HttpMethod.PUT,    "/api/v1/posts/*/reviews/*").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/posts/*/reviews/*").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/posts/*/rate").authenticated()
+                        .requestMatchers(HttpMethod.POST,   "/api/v1/posts/*/rate").authenticated()
                         .requestMatchers(HttpMethod.GET,    "/api/v1/notifications/**").authenticated()
                         .requestMatchers("/api/v1/users/my-page").authenticated()
                         .requestMatchers("/api/v1/users/my-page/**").authenticated()
-                        .requestMatchers(HttpMethod.POST,   "/api/v1/posts/*/rate").authenticated()
-                        .requestMatchers(HttpMethod.GET,  "/api/v1/terms/agree").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/terms/agree").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/terms/disagree").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/accounts/password").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/accounts").authenticated()
+                        .requestMatchers("/api/v1/terms/agree").authenticated()
+                        .requestMatchers("/api/v1/terms/disagree").authenticated()
                         .requestMatchers(AUTH_WHITELIST).permitAll()
                         .anyRequest().permitAll())
                 .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)

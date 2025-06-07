@@ -47,7 +47,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (path.startsWith("/api/v1/login")
                 || path.startsWith("/api/v1/logout")
                 || path.startsWith("/api/v1/auth/kakao")
-                || path.startsWith("/api/v1/accounts")
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/v3/api-docs"))
             return true;
