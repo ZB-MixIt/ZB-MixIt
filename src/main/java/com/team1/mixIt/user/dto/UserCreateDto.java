@@ -4,6 +4,7 @@ import com.team1.mixIt.user.controller.UserAccountController;
 import lombok.*;
 
 import java.util.List;
+import java.util.Objects;
 
 @Getter
 @Builder
@@ -17,6 +18,8 @@ public class UserCreateDto {
     private String email;
     private String nickname;
     private Long imageId;
+    private Boolean notifyOn;
+    private Boolean pushOn;
     private List<Integer> terms;
 
     public static UserCreateDto of(UserAccountController.CreateUserRequest request) {
@@ -29,6 +32,8 @@ public class UserCreateDto {
                 .nickname(request.getNickname())
                 .imageId(request.getImageId())
                 .terms(request.getTerms())
+                .notifyOn(Objects.isNull(request.getNotifyOn()) ? false : request.getNotifyOn())
+                .pushOn(!Objects.isNull(request.getPushOn()) && request.getNotifyOn())
                 .build();
     }
 }

@@ -53,6 +53,8 @@ public class UserAccountService {
                 .birthdate(convertToLocalDate(dto.getBirth()))
                 .email(dto.getEmail())
                 .nickname(dto.getNickname())
+                .notifyOn(dto.getNotifyOn())
+                .pushOn(dto.getPushOn())
                 .build();
 
         if (Objects.nonNull(dto.getImageId())) {

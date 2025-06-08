@@ -163,6 +163,12 @@ public class UserAccountController {
         private Long imageId;
 
         @NotNull
+        private Boolean notifyOn;
+
+        @NotNull
+        private Boolean pushOn;
+
+        @NotNull
         private List<Integer> terms;
     }
 
