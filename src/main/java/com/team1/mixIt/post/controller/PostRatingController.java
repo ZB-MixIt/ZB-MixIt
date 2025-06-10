@@ -2,7 +2,6 @@ package com.team1.mixIt.post.controller;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.post.dto.request.RatingRequest;
-import com.team1.mixIt.post.exception.BadRequestException;
 import com.team1.mixIt.post.service.PostRatingService;
 import com.team1.mixIt.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
@@ -48,12 +47,12 @@ public class PostRatingController {
     }
 
     @Operation(
-            summary = "내 별점 조회",
-            description = "로그인한 사용자가 해당 게시물에 매긴 평점을 조회합니다. 등록된 평점이 없으면 0을 반환합니다."
+            summary = "내 별점 조회 (비회원은 게시물 평균 평점 조회)",
+            description = "사용자가 해당 게시물에 매긴 평점을 조회합니다. 비회원의 경우 게시물의 평균 평점을 반환합니다."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
+            @ApiResponse(responseCode = "401", description = "인증 필요 (POST 등)"),
             @ApiResponse(responseCode = "404", description = "게시물 없음"),
             @ApiResponse(responseCode = "500", description = "서버 에러")
     })
@@ -62,8 +61,11 @@ public class PostRatingController {
             @PathVariable Long postId,
             @AuthenticationPrincipal User user
     ) {
-        return ResponseTemplate.ok(
-                ratingService.getUserRating(postId, user.getId())
-        );
+        if (user == null) {
+            // 비회원: 평균 평점 반환
+            return ResponseTemplate.ok(ratingService.getAverageRate(postId));
+        }
+        // 회원: 내가 준 평점 반환
+        return ResponseTemplate.ok(ratingService.getUserRating(postId, user.getId()));
     }
 }
