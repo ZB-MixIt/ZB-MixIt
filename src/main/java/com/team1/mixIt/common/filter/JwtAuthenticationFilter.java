@@ -72,26 +72,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 //            filterChain.doFilter(request, response);
 //            return;
 //        }
-//
-//        if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/v1/home")) {
-//            filterChain.doFilter(request, response);
-//            return;
-//        }
-//
-//        if ("GET".equalsIgnoreCase(method)) {
-//            if (path.startsWith("/api/v1/posts/")
-//                    || path.equals("/api/v1/posts/search")) {
-//                filterChain.doFilter(request, response);
-//                return;
-//            }
-//        }
-//
-//        if ("GET".equalsIgnoreCase(method) &&
-//                (path.startsWith("/api/v1/tags/popular")
-//                        || path.startsWith("/api/v1/tags/autocomplete"))) {
-//            filterChain.doFilter(request, response);
-//            return;
-//        }
+
+        if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/v1/home")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        if ("GET".equalsIgnoreCase(method)) {
+            if (path.startsWith("/api/v1/posts/")
+                    || path.equals("/api/v1/posts/search")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+        }
+
+        if ("GET".equalsIgnoreCase(method) &&
+                (path.startsWith("/api/v1/tags/popular")
+                        || path.startsWith("/api/v1/tags/autocomplete"))) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         final String authHeader = request.getHeader("Authorization");
 
