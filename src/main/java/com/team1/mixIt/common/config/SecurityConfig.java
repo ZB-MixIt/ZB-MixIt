@@ -54,7 +54,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,   "/api/v1/posts/*/reviews").authenticated()
                         .requestMatchers(HttpMethod.PUT,    "/api/v1/posts/*/reviews/*").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/posts/*/reviews/*").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/posts/*/rate").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/posts/*/rate").permitAll()
                         .requestMatchers(HttpMethod.POST,   "/api/v1/posts/*/rate").authenticated()
                         .requestMatchers(HttpMethod.GET,    "/api/v1/notifications/**").authenticated()
                         .requestMatchers("/api/v1/users/my-page").authenticated()
