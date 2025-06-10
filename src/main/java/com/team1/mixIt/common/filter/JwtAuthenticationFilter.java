@@ -39,20 +39,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String method = request.getMethod();
 
-        final String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return true;
-        }
+//        final String authHeader = request.getHeader("Authorization");
+//        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+//            return true;
+//        }
 
         if (path.startsWith("/api/v1/login")
                 || path.startsWith("/api/v1/logout")
                 || path.startsWith("/api/v1/auth/kakao")
                 || path.startsWith("/swagger-ui")
-                || path.startsWith("/v3/api-docs"))
+                || path.startsWith("/v3/api-docs")){
             return true;
-
-        return super.shouldNotFilter(request);
     }
+            if ("GET".equalsIgnoreCase(method) && (
+            path.startsWith("/api/v1/home")
+            || path.startsWith("/api/v1/posts/")
+            || path.equals("/api/v1/posts/search")
+            || path.startsWith("/api/v1/tags/popular")
+            || path.startsWith("/api/v1/tags/autocomplete"))) {
+        return true;
+    }
+    String authHeader = request.getHeader("Authorization");
+    return authHeader == null || !authHeader.startsWith("Bearer ");
+}
 
     @Override
     protected void doFilterInternal(
@@ -60,8 +69,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-        String path = request.getRequestURI();
-        String method = request.getMethod();
+//        String path = request.getRequestURI();
+//        String method = request.getMethod();
 
 //        if (path.startsWith("/api/v1/login")
 //                || path.startsWith("/api/v1/logout")
@@ -73,25 +82,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 //            return;
 //        }
 
-        if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/v1/home")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        if ("GET".equalsIgnoreCase(method)) {
-            if (path.startsWith("/api/v1/posts/")
-                    || path.equals("/api/v1/posts/search")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-        }
-
-        if ("GET".equalsIgnoreCase(method) &&
-                (path.startsWith("/api/v1/tags/popular")
-                        || path.startsWith("/api/v1/tags/autocomplete"))) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+//        if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/v1/home")) {
+//            filterChain.doFilter(request, response);
+//            return;
+//        }
+//
+//        if ("GET".equalsIgnoreCase(method)) {
+//            if (path.startsWith("/api/v1/posts/")
+//                    || path.equals("/api/v1/posts/search")) {
+//                filterChain.doFilter(request, response);
+//                return;
+//            }
+//        }
+//
+//        if ("GET".equalsIgnoreCase(method) &&
+//                (path.startsWith("/api/v1/tags/popular")
+//                        || path.startsWith("/api/v1/tags/autocomplete"))) {
+//            filterChain.doFilter(request, response);
+//            return;
+//        }
 
         final String authHeader = request.getHeader("Authorization");
 
@@ -118,10 +127,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
         } catch (Exception exception) {
-//            handlerExceptionResolver.resolveException(request, response, null, exception);
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("로그인이 필요합니다.");
-            return;
+            handlerExceptionResolver.resolveException(request, response, null, exception);
+
 
         }
     }
