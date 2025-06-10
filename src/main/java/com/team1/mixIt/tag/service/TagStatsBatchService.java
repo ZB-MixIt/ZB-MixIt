@@ -13,6 +13,6 @@ public class TagStatsBatchService {
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     public void dailyAggregate() {
         // 최근 1일 데이터 기준
-        tagStatsService.aggregateFromPostHashtag(1);
+        tagStatsService.aggregateFromPostHashtag(3);
     }
 }

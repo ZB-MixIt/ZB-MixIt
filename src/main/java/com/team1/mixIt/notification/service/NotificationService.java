@@ -23,4 +23,19 @@ public class NotificationService {
                 ))
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    public List<NotificationDto> getUnreadNotifications(Long userId) {
+        return notificationRepo.findByReceiverIdAndIsReadFalseOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(NotificationDto::fromEntity)
+                .toList();
+    }
+
+    @Transactional
+    public void markAsRead(Long userId, Long notificationId) {
+        var n = notificationRepo.findByIdAndReceiverId(notificationId, userId)
+                .orElseThrow(() -> new RuntimeException("알림이 없거나 권한이 없습니다."));
+        n.setRead(true);
+    }
 }

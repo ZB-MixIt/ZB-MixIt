@@ -22,15 +22,17 @@ public class Top5NotificationScheduler {
     @Transactional
     public void notifyDailyTop5Views() {
         Page<PostResponse> top5 = feedService.getTodayTopViewed(null,0,5);
-        top5.forEach(dto ->
-                eventPublisher.publishEvent(new NotificationEvent(
-                        this,
-                        dto.getUserId(),
-                        "TOP5_VIEW",
-                        dto.getId(),
-                        "당신의 조합이 오늘 인기 TOP5에 진입했습니다"
-                ))
-        );
+        top5.forEach(dto -> {
+            String nickname = dto.getAuthorNickname();
+            String msg = String.format("%s님의 조합이 오늘 인기 TOP5에 진입했습니다", nickname);
+            eventPublisher.publishEvent(new NotificationEvent(
+                    this,
+                    dto.getUserId(),
+                    "TOP5_VIEW",
+                    dto.getId(),
+                    msg
+            ));
+        });
     }
 
     // 매주 월요일 자정
@@ -38,14 +40,16 @@ public class Top5NotificationScheduler {
     @Transactional
     public void notifyWeeklyTop5Bookmarks() {
         Page<PostResponse> top5 = feedService.getWeeklyTopBookmarked(null, 0,5);
-        top5.forEach(dto ->
-                eventPublisher.publishEvent(new NotificationEvent(
-                        this,
-                        dto.getUserId(),
-                        "TOP5_BOOKMARK",
-                        dto.getId(),
-                        "당신의 조합이 지난 주 인기 북마크 TOP5에 진입했습니다"
-                ))
-        );
+        top5.forEach(dto -> {
+            String nickname = dto.getAuthorNickname();
+            String msg = String.format("%s님의 조합이 지난 주 인기 북마크 TOP5에 진입했습니다", nickname);
+            eventPublisher.publishEvent(new NotificationEvent(
+                    this,
+                    dto.getUserId(),
+                    "TOP5_BOOKMARK",
+                    dto.getId(),
+                    "당신의 조합이 지난 주 인기 북마크 TOP5에 진입했습니다"
+            ));
+        });
     }
 }

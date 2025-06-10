@@ -1,8 +1,7 @@
-/*
 package com.team1.mixIt.notification.controller;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
-import com.team1.mixIt.notification.entity.Notification;
+import com.team1.mixIt.notification.dto.NotificationDto;
 import com.team1.mixIt.notification.service.NotificationService;
 import com.team1.mixIt.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,13 +18,12 @@ public class NotificationReadController {
     private final NotificationService notificationService;
 
     @Operation(summary = "읽지 않은 알림 목록 조회")
-    @GetMapping
-    public ResponseTemplate<List<Notification>> getUnread(
+    @GetMapping("/unread")
+    public ResponseTemplate<List<NotificationDto>> getUnread(
             @AuthenticationPrincipal User user
     ) {
         return ResponseTemplate.ok(
-                null
-                notificationService.getUnreadNotifications(user.getId()) // Todo 추후 수정 필요
+                notificationService.getUnreadNotifications(user.getId())
         );
     }
 
@@ -39,4 +37,3 @@ public class NotificationReadController {
         return ResponseTemplate.ok();
     }
 }
-*/
