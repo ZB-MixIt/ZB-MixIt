@@ -80,6 +80,7 @@ public class UserMyPageController {
             description = "MyPage 하위 알림 정보 조회 API"
     )
     @GetMapping("/notification")
+    @Deprecated
     public ResponseTemplate<GetMyPageNotificationResponse> getMyPageNotification(
             @AuthenticationPrincipal User user
     ) {
