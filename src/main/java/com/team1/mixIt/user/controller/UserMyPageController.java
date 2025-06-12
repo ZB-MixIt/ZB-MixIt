@@ -215,9 +215,9 @@ public class UserMyPageController {
                     .nickname(user.getNickname())
                     .emailNotify(user.isEmailNotify())
                     .smsNotify(user.isSmsNotify())
-                    .postLikeAlarm(user.isPopular_post_alarm())
+                    .postLikeAlarm(user.isPostLikeAlarm())
                     .postReviewAlarm(user.isPostReviewAlarm())
-                    .popularPostAlarm(user.isPopular_post_alarm())
+                    .popularPostAlarm(user.isPopularPostAlarm())
                     ;
 
             if (Objects.nonNull(user.getProfileImage())) {

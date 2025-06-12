@@ -67,7 +67,7 @@ public class User extends BaseEntity implements UserDetails  {
 
     @Column(name = "popular_post_alarm", nullable = false)
     @Builder.Default
-    private boolean popular_post_alarm = true;
+    private boolean popularPostAlarm = true;
 
 
     private LocalDateTime createdAt;
@@ -99,7 +99,7 @@ public class User extends BaseEntity implements UserDetails  {
     }
 
     public void updatePopularPostAlarm(boolean flag) {
-        this.popular_post_alarm = flag;
+        this.popularPostAlarm = flag;
     }
 
     public void updateNickname(String nickname) {

@@ -49,7 +49,7 @@ public class AuthenticationController {
                         .smsNotify(user.isSmsNotify())
                         .postLikeAlarm(user.isPostLikeAlarm())
                         .postReviewAlarm(user.isPostReviewAlarm())
-                        .popularPostAlarm(user.isPopular_post_alarm())
+                        .popularPostAlarm(user.isPopularPostAlarm())
                         .expiresIn(jwtService.getExpirationTime())
                         .build()
         );
