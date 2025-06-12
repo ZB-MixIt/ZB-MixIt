@@ -51,14 +51,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.startsWith("/v3/api-docs")){
             return true;
     }
-            if ("GET".equalsIgnoreCase(method) && (
-            path.startsWith("/api/v1/home")
-            || path.startsWith("/api/v1/posts/")
-            || path.equals("/api/v1/posts/search")
-            || path.startsWith("/api/v1/tags/popular")
-            || path.startsWith("/api/v1/tags/autocomplete"))) {
-        return true;
-    }
+        if ("GET".equalsIgnoreCase(method)) {
+            if (path.matches("/api/v1/posts/\\d+/like")) {
+                return false;
+            }
+            // 그 외 공개 GET
+            if (path.startsWith("/api/v1/home")
+                    || path.startsWith("/api/v1/posts/")
+                    || path.equals("/api/v1/posts/search")
+                    || path.startsWith("/api/v1/tags")) {
+                return true;
+            }
+        }
     String authHeader = request.getHeader("Authorization");
     return authHeader == null || !authHeader.startsWith("Bearer ");
 }
