@@ -45,6 +45,11 @@ public class AuthenticationController {
                         .email(user.getEmail())
                         .birth(DateUtils.yyMMdd(user.getBirthdate()))
                         .token(token)
+                        .emailNotify(user.isEmailNotify())
+                        .smsNotify(user.isSmsNotify())
+                        .postLikeAlarm(user.isPostLikeAlarm())
+                        .postReviewAlarm(user.isPostReviewAlarm())
+                        .popularPostAlarm(user.isPopular_post_alarm())
                         .expiresIn(jwtService.getExpirationTime())
                         .build()
         );
@@ -114,6 +119,11 @@ public class AuthenticationController {
         private String birth;
         private String name;
         private String token;
+        private boolean emailNotify;
+        private boolean smsNotify;
+        private boolean postLikeAlarm;
+        private boolean postReviewAlarm;
+        private boolean popularPostAlarm;
         private long expiresIn;
     }
 }

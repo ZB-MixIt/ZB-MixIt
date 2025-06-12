@@ -23,13 +23,14 @@ public class UserService {
         return userRepository.findByLoginId(loginId).orElseThrow(() -> new ClientException(ResponseCode.USER_NOT_FOUND));
     }
 
+    @Deprecated
     @Transactional
     public void updateNotificationSettings(Long userId, boolean eventOn, boolean alertOn) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ClientException(ResponseCode.USER_NOT_FOUND));
 
-        user.setNotifyOn(eventOn);
-        user.setPushOn(alertOn);
+//        user.setPostLikeAlarm(eventOn);
+//        user.setPushOn(alertOn);
         userRepository.save(user);
     }
 }

@@ -53,13 +53,17 @@ public class UserMyPageService {
         if (Objects.nonNull(dto.imageId())) {
             Image image = imageService.findById(user.getId());
 
-            if (Objects.nonNull(image.getUser())) throw new ClientException(ResponseCode.IMAGE_OWNER_ALREADY_EXIST);
+            if (Objects.nonNull(image.getUser()) && !image.getUser().equals(user)) throw new ClientException(ResponseCode.IMAGE_OWNER_ALREADY_EXIST);
             image.updateUser(user);
             user.updateProfileImage(image);
             imageRepository.save(image);
         }
-        user.updateNotifyOn(dto.notification());
-        user.updatePushOn(dto.alarm());
+        user.updateNickname(dto.nickname());
+        user.updateEmailNotify(dto.emailNotify());
+        user.updateSmsNotify(dto.smsNotify());
+        user.updatePostLikeAlarm(dto.postLikeAlarm());
+        user.updatePostReviewAlarm(dto.postReviewAlarm());
+        user.updatePopularPostAlarm(dto.popularPostAlarm());
         return user;
     }
 }

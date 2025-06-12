@@ -6,7 +6,7 @@ import com.team1.mixIt.email.service.EmailService;
 import com.team1.mixIt.image.entity.Image;
 import com.team1.mixIt.image.repository.ImageRepository;
 import com.team1.mixIt.term.service.UserTermsService;
-import com.team1.mixIt.user.dto.UserCreateDto;
+import com.team1.mixIt.user.controller.UserAccountController;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.repository.UserRepository;
 import com.team1.mixIt.utils.DateUtils;
@@ -38,7 +38,7 @@ public class UserAccountService {
     }
 
     @Transactional
-    public User createUser(UserCreateDto dto) {
+    public User createUser(UserAccountController.CreateUserRequest dto) {
         userRepository.findByLoginId(dto.getLoginId()).ifPresent(v -> { throw new ClientException(ResponseCode.DUPLICATE_LOGIN_ID); });
         userRepository.findByEmail(dto.getEmail()).ifPresent(v -> { throw new ClientException(ResponseCode.DUPLICATE_EMAIL); });
         userRepository.findByNickname(dto.getNickname()).ifPresent(v -> { throw new ClientException(ResponseCode.DUPLICATE_NICKNAME); });
@@ -53,8 +53,8 @@ public class UserAccountService {
                 .birthdate(convertToLocalDate(dto.getBirth()))
                 .email(dto.getEmail())
                 .nickname(dto.getNickname())
-                .notifyOn(dto.getNotifyOn())
-                .pushOn(dto.getPushOn())
+                .emailNotify(dto.getEmailNotify())
+                .smsNotify(dto.getSmsNotify())
                 .build();
 
         if (Objects.nonNull(dto.getImageId())) {

@@ -66,8 +66,13 @@ public class UserMyPageController {
     public record UpdateMyPageRequest (
             String nickname,
             Long imageId,
-            boolean notification,
-            boolean alarm
+
+            @NotNull Boolean emailNotify,
+
+            @NotNull Boolean smsNotify,
+            @NotNull Boolean postLikeAlarm,
+            @NotNull Boolean postReviewAlarm,
+            @NotNull Boolean popularPostAlarm
     ) {}
 
     @Operation(
@@ -80,8 +85,8 @@ public class UserMyPageController {
     ) {
         return ResponseTemplate.ok(
                 GetMyPageNotificationResponse.builder()
-                        .eventNotification(user.isNotifyOn())
-                        .pushNotification(user.isNotifyOn())
+                        .eventNotification(user.isPostLikeAlarm())
+                        .pushNotification(user.isPostLikeAlarm())
                         .build()
         );
     }
@@ -91,6 +96,7 @@ public class UserMyPageController {
             description = "MyPage 하위 알림 정보 수정 API"
     )
     @PostMapping("/notification")
+    @Deprecated
     public ResponseTemplate<Void> updateNotification(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody UpdateNotificationRequest request
@@ -193,6 +199,11 @@ public class UserMyPageController {
         private String email;
         private String nickname;
         private Image image;
+        private Boolean emailNotify;
+        private Boolean smsNotify;
+        private Boolean postLikeAlarm;
+        private Boolean postReviewAlarm;
+        private Boolean popularPostAlarm;
 
         public static GetMyPageResponse of(User user) {
             GetMyPageResponseBuilder builder = GetMyPageResponse.builder()
@@ -200,7 +211,13 @@ public class UserMyPageController {
                     .name(user.getName())
                     .birth(DateUtils.yyMMdd(user.getBirthdate()))
                     .email(user.getEmail())
-                    .nickname(user.getNickname());
+                    .nickname(user.getNickname())
+                    .emailNotify(user.isEmailNotify())
+                    .smsNotify(user.isSmsNotify())
+                    .postLikeAlarm(user.isPopular_post_alarm())
+                    .postReviewAlarm(user.isPostReviewAlarm())
+                    .popularPostAlarm(user.isPopular_post_alarm())
+                    ;
 
             if (Objects.nonNull(user.getProfileImage())) {
                 builder.image(

@@ -32,8 +32,8 @@ public class UserCreateDto {
                 .nickname(request.getNickname())
                 .imageId(request.getImageId())
                 .terms(request.getTerms())
-                .notifyOn(Objects.isNull(request.getNotifyOn()) ? false : request.getNotifyOn())
-                .pushOn(!Objects.isNull(request.getPushOn()) && request.getNotifyOn())
+                .notifyOn(Objects.isNull(request.getEmailNotify()) ? false : request.getEmailNotify())
+                .pushOn(!Objects.isNull(request.getSmsNotify()) && request.getEmailNotify())
                 .build();
     }
 }

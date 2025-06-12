@@ -49,19 +49,38 @@ public class User extends BaseEntity implements UserDetails  {
 
     private String socialLink;
 
-    // 알림 수신 여부: 기본값 on
-    @Column(name = "notify_on", nullable = false)
+    @Column(name = "email_notify", nullable = false)
     @Builder.Default
-    private boolean notifyOn = true;
+    private boolean emailNotify = false;
 
-    // 푸시 알림 수신 여부
-    @Column(name = "push_on", nullable = false)
+    @Column(name = "sms_notify", nullable = false)
     @Builder.Default
-    private boolean pushOn = true;
+    private boolean smsNotify = false;
+
+    @Column(name = "post_like_alarm", nullable = false)
+    @Builder.Default
+    private boolean postLikeAlarm = true;
+
+    @Column(name = "post_review_alarm", nullable = false)
+    @Builder.Default
+    private boolean postReviewAlarm = true;
+
+    @Column(name = "popular_post_alarm", nullable = false)
+    @Builder.Default
+    private boolean popular_post_alarm = true;
+
 
     private LocalDateTime createdAt;
 
     private LocalDateTime modifiedAt;
+
+    public void updateEmailNotify(boolean flag) {
+        this.emailNotify = flag;
+    }
+
+    public void updateSmsNotify(boolean flag) {
+        this.smsNotify = flag;
+    }
 
     public void updatePassword(String password) {
         this.password = password;
@@ -71,12 +90,20 @@ public class User extends BaseEntity implements UserDetails  {
         this.profileImage = image;
     }
 
-    public void updateNotifyOn(boolean notifyOn) {
-        this.notifyOn = notifyOn;
+    public void updatePostLikeAlarm(boolean flag) {
+        this.postLikeAlarm = flag;
     }
 
-    public void updatePushOn(boolean pushOn) {
-        this.pushOn = pushOn;
+    public void updatePostReviewAlarm(boolean flag) {
+        this.postReviewAlarm = flag;
+    }
+
+    public void updatePopularPostAlarm(boolean flag) {
+        this.popular_post_alarm = flag;
+    }
+
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
     }
 
     @Override

@@ -69,7 +69,7 @@ public class UserAccountController {
             summary = "Sign up",
             description = "회원 가입 API")
     public ResponseTemplate<CreateUserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
-        User user = userAccountService.createUser(UserCreateDto.of(request));
+        User user = userAccountService.createUser(request);
         return ResponseTemplate.ok(CreateUserResponse.of(user));
     }
 
@@ -163,10 +163,10 @@ public class UserAccountController {
         private Long imageId;
 
         @NotNull
-        private Boolean notifyOn;
+        private Boolean emailNotify;
 
         @NotNull
-        private Boolean pushOn;
+        private Boolean smsNotify;
 
         @NotNull
         private List<Integer> terms;

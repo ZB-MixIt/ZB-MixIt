@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PostMapping;
 
 @Service
 @RequiredArgsConstructor
@@ -43,13 +42,15 @@ public class PostLikeService {
                     .actionType("LIKE")
                     .build());
 
-            eventPublisher.publishEvent(new NotificationEvent(
-                    this,
-                    post.getUserId(),
-                    "POST_LIKE",
-                    postId,
-                    "회원님 게시물에 새 좋아요가 달렸습니다."
-            ));
+            if (post.getUser().isPostLikeAlarm()) {
+                eventPublisher.publishEvent(new NotificationEvent(
+                        this,
+                        post.getUserId(),
+                        "POST_LIKE",
+                        postId,
+                        "회원님 게시물에 새 좋아요가 달렸습니다."
+                ));
+            }
         }
 
         long count = postLikeRepository.countByPostId(postId);

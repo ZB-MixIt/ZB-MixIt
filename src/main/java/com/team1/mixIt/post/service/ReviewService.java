@@ -52,7 +52,7 @@ public class ReviewService {
         }
 
         Long receiverId = post.getUserId();
-        if (!receiverId.equals(user.getId())) {
+        if (!receiverId.equals(user.getId()) && post.getUser().isPostReviewAlarm()) {
             eventPublisher.publishEvent(new NotificationEvent(
                     this,
                     receiverId,
