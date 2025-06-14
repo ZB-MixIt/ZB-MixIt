@@ -51,7 +51,7 @@ public class UserMyPageService {
         }
 
         if (Objects.nonNull(dto.imageId())) {
-            Image image = imageService.findById(user.getId());
+            Image image = imageService.findById(dto.imageId());
 
             if (Objects.nonNull(image.getUser()) && !image.getUser().equals(user)) throw new ClientException(ResponseCode.IMAGE_OWNER_ALREADY_EXIST);
             image.updateUser(user);
