@@ -57,7 +57,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
             // 그 외 공개 GET
             if (path.startsWith("/api/v1/home")
-                    || path.startsWith("/api/v1/posts/")
                     || path.equals("/api/v1/posts/search")
                     || path.startsWith("/api/v1/tags")) {
                 return true;
