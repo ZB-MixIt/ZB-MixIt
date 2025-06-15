@@ -3,6 +3,7 @@ package com.team1.mixIt.post.dto.response;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.repository.PostLikeRepository;
 import com.team1.mixIt.post.repository.PostRatingRepository;
+import com.team1.mixIt.user.repository.UserRepository;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -63,13 +64,18 @@ public class BookmarkResponse {
             ImageService imageService,
             PostLikeRepository postLikeRepository,
             PostRatingRepository postRatingRepository,
+            UserRepository userRepository,
             String defaultImageUrl
     ) {
         Long postId = post.getId();
         String title = post.getTitle();
 
+
+        // 작성자 정보를 UserRepository 로 직접 조회
+        com.team1.mixIt.user.entity.User author = userRepository.findById(post.getUserId())
+                .orElseThrow(() -> new IllegalStateException("작성자 정보 없음"));
+
         String authorProfileImage = null;
-        com.team1.mixIt.user.entity.User author = post.getUser();
         if (author.getProfileImage() != null) {
             authorProfileImage = author.getProfileImage().getUrl();
         }

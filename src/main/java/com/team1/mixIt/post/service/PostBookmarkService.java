@@ -100,6 +100,7 @@ public class PostBookmarkService {
                         imageService,
                         postLikeRepository,
                         postRatingRepository,
+                        userRepository,
                         defaultImageUrl
                 )
         );
@@ -110,7 +111,6 @@ public class PostBookmarkService {
         }
         return responsePage;
     }
-
 
     @Transactional(readOnly = true)
     public boolean isBookmarked(Long postId, Long userId) {

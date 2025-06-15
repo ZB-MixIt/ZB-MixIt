@@ -9,6 +9,7 @@ import com.team1.mixIt.post.dto.response.LikeResponse;
 import com.team1.mixIt.post.entity.PostLike;
 import com.team1.mixIt.post.repository.PostLikeRepository;
 import com.team1.mixIt.post.repository.PostRepository;
+import com.team1.mixIt.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,8 @@ public class PostLikeService {
     private final PostLikeRepository postLikeRepository;
     private final ActionLogRepository actionLogRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final UserRepository userRepository;
+
 
     @Transactional
     public LikeResponse addLike(Long postId, Long userId) {
@@ -42,10 +45,12 @@ public class PostLikeService {
                     .actionType("LIKE")
                     .build());
 
-            if (post.getUser().isPostLikeAlarm()) {
+            var author = userRepository.findById(post.getUserId())
+                    .orElseThrow(() -> new ClientException(ResponseCode.USER_NOT_FOUND));
+            if (author.isPostLikeAlarm()) {
                 eventPublisher.publishEvent(new NotificationEvent(
                         this,
-                        post.getUserId(),
+                        author.getId(),
                         "POST_LIKE",
                         postId,
                         "회원님 게시물에 새 좋아요가 달렸습니다."
@@ -56,7 +61,6 @@ public class PostLikeService {
         long count = postLikeRepository.countByPostId(postId);
         return new LikeResponse(hasLiked, count);
     }
-
 
 
     @Transactional

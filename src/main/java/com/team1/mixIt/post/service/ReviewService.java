@@ -14,6 +14,7 @@ import com.team1.mixIt.post.repository.PostRepository;
 import com.team1.mixIt.post.repository.ReviewLikeRepository;
 import com.team1.mixIt.post.repository.ReviewRepository;
 import com.team1.mixIt.user.entity.User;
+import com.team1.mixIt.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -32,12 +33,21 @@ public class ReviewService {
     private final ReviewLikeRepository reviewLikeRepo;
     private final ImageService imageService;
     private final ApplicationEventPublisher eventPublisher;
+    private final UserRepository userRepository;
+
 
     @Transactional
     public ReviewResponse addReview(Long postId, User user, ReviewRequest req) {
         Post post = postRepo.findById(postId)
                 .orElseThrow(() -> new ClientException(ResponseCode.POST_NOT_FOUND));
-        List<Long> newImageIds = req.getImageIds() != null ? req.getImageIds() : List.of();
+
+        User postAuthor = userRepository.findById(post.getUserId())
+                .orElseThrow(() -> new ClientException(ResponseCode.USER_NOT_FOUND));
+
+        List<Long> newImageIds = req.getImageIds() != null
+                ? req.getImageIds()
+                : List.of();
+
         Review review = Review.builder()
                 .user(user)
                 .post(post)
@@ -51,16 +61,16 @@ public class ReviewService {
             imageService.setOwner(images, user);
         }
 
-        Long receiverId = post.getUserId();
-        if (!receiverId.equals(user.getId()) && post.getUser().isPostReviewAlarm()) {
+        if (!postAuthor.getId().equals(user.getId()) && postAuthor.isPostReviewAlarm()) {
             eventPublisher.publishEvent(new NotificationEvent(
                     this,
-                    receiverId,
+                    postAuthor.getId(),
                     "POST_COMMENT",
                     postId,
                     String.format("%s님이 내 게시물에 댓글을 남겼습니다.", user.getNickname())
             ));
         }
+
         return ReviewResponse.fromEntity(review, user.getId(), imageService);
     }
 
