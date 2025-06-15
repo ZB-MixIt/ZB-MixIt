@@ -49,11 +49,32 @@ public class PostSearchServiceImpl implements PostSearchService {
         );
         Pageable pageable = PageRequest.of(req.getPage(), req.getSize(), sort);
 
-        // Specification 생성: keyword + category
+        //// Specification 생성: keyword + category
+//        Specification<Post> spec = (root, query, cb) -> {
+//            List<Predicate> preds = new ArrayList<>();
+//
+//            if (req.getKeyword() != null && !req.getKeyword().isBlank()) {
+//                String likePattern = "%" + req.getKeyword().trim() + "%";
+//                Predicate titleMatch = cb.like(root.get("title"), likePattern);
+//                Join<Post, ?> hashtagJoin = root.join("hashtag", JoinType.LEFT);
+//                Predicate tagMatch = cb.like(hashtagJoin.get("hashtag"), likePattern);
+//                preds.add(cb.or(titleMatch, tagMatch));
+//                query.distinct(true);
+//            }
+//
+//            if (req.getCategory() != null) {
+//                preds.add(cb.equal(root.get("category"), req.getCategory()));
+//            }
+//
+//            return cb.and(preds.toArray(new Predicate[0]));
+//        };
+
         Specification<Post> spec = (root, query, cb) -> {
             List<Predicate> preds = new ArrayList<>();
+            boolean hasKeyword = req.getKeyword() != null && !req.getKeyword().isBlank();
 
-            if (req.getKeyword() != null && !req.getKeyword().isBlank()) {
+            // 1 키워드가 있을 때만 타이틀/태그 검색
+            if (hasKeyword) {
                 String likePattern = "%" + req.getKeyword().trim() + "%";
                 Predicate titleMatch = cb.like(root.get("title"), likePattern);
                 Join<Post, ?> hashtagJoin = root.join("hashtag", JoinType.LEFT);
@@ -62,7 +83,8 @@ public class PostSearchServiceImpl implements PostSearchService {
                 query.distinct(true);
             }
 
-            if (req.getCategory() != null) {
+            // 2 키워드가 없을 때만 카테고리 필터 적용
+            if (!hasKeyword && req.getCategory() != null) {
                 preds.add(cb.equal(root.get("category"), req.getCategory()));
             }
 
