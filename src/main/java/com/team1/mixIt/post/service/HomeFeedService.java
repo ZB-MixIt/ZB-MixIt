@@ -57,34 +57,41 @@ public class HomeFeedService {
         } else {
             window = switch (forceWindow) {
                 case "24h" -> Duration.ofHours(24);
-                case "7d" -> Duration.ofDays(7);
+                case "7d"  -> Duration.ofDays(7);
                 case "30d" -> Duration.ofDays(30);
-                default -> null;
+                default    -> null;
             };
         }
 
-        // 한 번 결정된 기간으로 전체 페이징 조회 -> page랑 size만 변경
         Pageable pg = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Post> posts;
         if (window != null) {
             LocalDateTime since = LocalDateTime.now().minus(window);
             posts = postRepository.findAll(
-                    (root, q, cb) -> cb.and(
-                            cb.equal(root.get("category"), category),
-                            cb.greaterThanOrEqualTo(root.get("createdAt"), since)
-                    ),
+                    (root, query, cb) -> {
+                        query.distinct(true);
+                        return cb.and(
+                                cb.equal(root.get("category"), category),
+                                cb.greaterThanOrEqualTo(root.get("createdAt"), since)
+                        );
+                    },
                     pg
             );
+
         } else {
-            // null ->? 전체 기간
+            // 전체 기간 조회에도 DISTINCT 적용
             posts = postRepository.findAll(
-                    (root, q, cb) -> cb.equal(root.get("category"), category),
+                    (root, query, cb) -> {
+                        query.distinct(true);
+                        return cb.equal(root.get("category"), category);
+                    },
                     pg
             );
         }
 
         return mapPosts(posts, currentUserId);
     }
+
 
     private Duration pickWindow(String category, int size) {
         // 24시간
@@ -115,13 +122,17 @@ public class HomeFeedService {
         Pageable pg = PageRequest.of(page, size, Sort.by("createdAt").descending());
         LocalDateTime since = LocalDateTime.now().minus(ago);
         return postRepository.findAll(
-                (root, q, cb) -> cb.and(
-                        cb.equal(root.get("category"), category),
-                        cb.greaterThanOrEqualTo(root.get("createdAt"), since)
-                ),
+                (root, query, cb) -> {
+                    query.distinct(true);
+                    return cb.and(
+                            cb.equal(root.get("category"), category),
+                            cb.greaterThanOrEqualTo(root.get("createdAt"), since)
+                    );
+                },
                 pg
         );
     }
+
 
     /**
      * 홈: 오늘의 인기 조회수 TopN (1d -> 7d -> 30d -> 전체 viewCount)
