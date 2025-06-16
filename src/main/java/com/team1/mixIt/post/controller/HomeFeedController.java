@@ -39,19 +39,32 @@ public class HomeFeedController {
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
     )
+//    @GetMapping("/category/{category}")
+//    public ResponseTemplate<Page<PostResponse>> category(
+//            @AuthenticationPrincipal User user,
+//            @PathVariable String category,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "20") int size,
+//            @RequestParam(required = false) String window
+//    ) {
+//        Long uid = currentUserId(user);
+//        log.info(">>> currentUserId = {}, window = {}", uid, window);
+//        return ResponseTemplate.ok(
+//                feedService.getHomeByCategory(uid, category, page, size, window)
+//        );
+//    }
+
     @GetMapping("/category/{category}")
     public ResponseTemplate<Page<PostResponse>> category(
             @AuthenticationPrincipal User user,
             @PathVariable String category,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String window
+            @RequestParam(defaultValue = "20") int size
     ) {
         Long uid = currentUserId(user);
-        log.info(">>> currentUserId = {}, window = {}", uid, window);
-        return ResponseTemplate.ok(
-                feedService.getHomeByCategory(uid, category, page, size, window)
-        );
+        log.info(">>> currentUserId = {}", uid);
+        Page<PostResponse> posts = feedService.getHomeByCategory(uid, category, page, size);
+        return ResponseTemplate.ok(posts);
     }
 
     @Operation(summary = "홈: 오늘의 인기 조회수 Top5",
