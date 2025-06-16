@@ -97,23 +97,13 @@ public class HomeFeedController {
     @Operation(summary = "홈: 인기 조합 더보기",
             description = "당일 조회수 기준 게시물 목록을 무한 스크롤 형식으로 반환합니다.")
     @GetMapping("/popular/combos")
-    public ResponseTemplate<InfinitePage<PostResponse>> popularCombos(
+    public InfinitePage<PostResponse> popularCombos(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        Page<PostResponse> pageData = feedService.getPopularCombos(currentUserId(user), page, size);
-
-        InfinitePage<PostResponse> inf = new InfinitePage<>();
-        inf.setPage(pageData.getNumber());
-        inf.setSize(pageData.getSize());
-        inf.setTotalPages(pageData.getTotalPages());
-        inf.setTotalElements(pageData.getTotalElements());
-        inf.setContent(pageData.getContent());
-        inf.setEmptyMessage(pageData.hasContent() ? null : "게시물이 없습니다");
-        inf.setNextPage(pageData.hasNext() ? pageData.getNumber() + 1 : null);
-
-        return ResponseTemplate.ok(inf);
+        Page<PostResponse> pg = feedService.getPopularCombos(currentUserId(user), page, size);
+        return toInfinitePage(pg);
     }
 
     @Operation(summary = "홈: 오늘의 추천 북마크 Top4",
@@ -134,24 +124,25 @@ public class HomeFeedController {
     @Operation(summary = "홈: 추천 게시물 더보기",
             description = "당일 북마크 기준 게시물 목록을 무한 스크롤 형식으로 반환합니다.")
     @GetMapping("/recommendations/today")
-    public ResponseTemplate<InfinitePage<PostResponse>> recommendedToday(
+    public InfinitePage<PostResponse> recommendedToday(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         HomeFeedResponse rec = feedService.getTodayRecommendations(currentUserId(user), page, size);
-        Page<PostResponse> pageData = rec.getPosts();
-
-        InfinitePage<PostResponse> inf = new InfinitePage<>();
-        inf.setPage(pageData.getNumber());
-        inf.setSize(pageData.getSize());
-        inf.setTotalPages(pageData.getTotalPages());
-        inf.setTotalElements(pageData.getTotalElements());
-        inf.setContent(pageData.getContent());
-        inf.setEmptyMessage(pageData.hasContent() ? null : "게시물이 없습니다");
-        inf.setNextPage(pageData.hasNext() ? pageData.getNumber() + 1 : null);
-
-        return ResponseTemplate.ok(inf);
+        Page<PostResponse> pg = rec.getPosts();
+        return toInfinitePage(pg);
     }
 
+    private <T> InfinitePage<T> toInfinitePage(Page<T> pg) {
+        InfinitePage<T> inf = new InfinitePage<>();
+        inf.setPage(pg.getNumber());
+        inf.setSize(pg.getSize());
+        inf.setTotalPages(pg.getTotalPages());
+        inf.setTotalElements(pg.getTotalElements());
+        inf.setContent(pg.getContent());
+        inf.setEmptyMessage(pg.hasContent() ? null : "게시물이 없습니다");
+        inf.setNextPage(pg.hasNext() ? pg.getNumber() + 1 : null);
+        return inf;
+    }
 }
