@@ -40,44 +40,17 @@ public class HomeFeedController {
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
     )
-    @GetMapping("/category/{category}")
-    public ResponseTemplate<InfinitePage<PostResponse>> category(
-            @AuthenticationPrincipal User user,
-            @PathVariable String category,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String window
-    ) {
-        Long uid = currentUserId(user);
-        Page<PostResponse> posts = feedService.getHomeByCategory(uid, category, page, size, window);
-
-        // InfinitePage로 변환
-        InfinitePage<PostResponse> inf = new InfinitePage<>();
-        inf.setPage(posts.getNumber());
-        inf.setSize(posts.getSize());
-        inf.setTotalPages(posts.getTotalPages());
-        inf.setTotalElements(posts.getTotalElements());
-        inf.setContent(posts.getContent());
-        inf.setEmptyMessage(posts.hasContent() ? null : "게시물이 없습니다");
-        inf.setNextPage(posts.hasNext() ? posts.getNumber() + 1 : null);
-
-        return ResponseTemplate.ok(inf);
-    }
-
-    /**
-     * 모바일용: /api/v1/home/category?category=...&page=...&size=...&sort=...
-     */
     @GetMapping("/category")
-    public ResponseTemplate<InfinitePage<PostResponse>> categoryByQuery(
+    public ResponseTemplate<InfinitePage<PostResponse>> category(
             @AuthenticationPrincipal User user,
             @RequestParam String category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sort
     ) {
-        Long uid = currentUserId(user);
-        // window 없이 전체 기간 조회
-        Page<PostResponse> posts = feedService.getHomeByCategory(uid, category, page, size, null);
+        Page<PostResponse> posts = feedService.getHomeByCategory(
+                currentUserId(user), category, page, size, sort
+        );
 
         InfinitePage<PostResponse> inf = new InfinitePage<>();
         inf.setPage(posts.getNumber());
@@ -87,7 +60,6 @@ public class HomeFeedController {
         inf.setContent(posts.getContent());
         inf.setEmptyMessage(posts.hasContent() ? null : "게시물이 없습니다");
         inf.setNextPage(posts.hasNext() ? posts.getNumber() + 1 : null);
-
         return ResponseTemplate.ok(inf);
     }
 

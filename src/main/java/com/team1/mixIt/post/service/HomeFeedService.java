@@ -49,47 +49,25 @@ public class HomeFeedService {
             String category,
             int page,
             int size,
-            String forceWindow
+            String sort
     ) {
-        Duration window;
-        if (forceWindow == null) {
-            window = pickWindow(category, size);
-        } else {
-            window = switch (forceWindow) {
-                case "24h" -> Duration.ofHours(24);
-                case "7d"  -> Duration.ofDays(7);
-                case "30d" -> Duration.ofDays(30);
-                default    -> null;
-            };
-        }
+        Sort order = switch (sort) {
+            case "popular" -> Sort.by("viewCount").descending();
+            case "bookmark"-> Sort.by("bookmarkCount").descending();
+            default        -> Sort.by("createdAt").descending();
+        };
 
-        Pageable pg = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Post> posts;
-        if (window != null) {
-            LocalDateTime since = LocalDateTime.now().minus(window);
-            posts = postRepository.findAll(
-                    (root, query, cb) -> {
-                        query.distinct(true);
-                        return cb.and(
-                                cb.equal(root.get("category"), category),
-                                cb.greaterThanOrEqualTo(root.get("createdAt"), since)
-                        );
-                    },
-                    pg
-            );
+        Pageable pg = PageRequest.of(page, size, order);
 
-        } else {
-            // 전체 기간 조회에도 DISTINCT 적용
-            posts = postRepository.findAll(
-                    (root, query, cb) -> {
-                        query.distinct(true);
-                        return cb.equal(root.get("category"), category);
-                    },
-                    pg
-            );
-        }
+        Page<Post> posts = postRepository.findAll(
+                (root, query, cb) -> {
+                    query.distinct(true);
+                    return cb.equal(root.get("category"), category);
+                },
+                pg
+        );
 
-        return mapPosts(posts, currentUserId);
+        return posts.map(p -> toDto(p, currentUserId));
     }
 
 
