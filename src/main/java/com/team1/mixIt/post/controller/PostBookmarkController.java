@@ -1,6 +1,7 @@
 package com.team1.mixIt.post.controller;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
+import com.team1.mixIt.post.dto.response.BookmarkResponse;
 import com.team1.mixIt.post.dto.response.BookmarkResponsePage;
 import com.team1.mixIt.post.service.PostBookmarkService;
 import com.team1.mixIt.user.entity.User;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -75,32 +77,18 @@ public class PostBookmarkController {
          )
  )
  @GetMapping("/users/me/bookmarks")
- public ResponseTemplate<BookmarkResponsePage> list(
+ public ResponseTemplate<Page<BookmarkResponse>> list(
          @AuthenticationPrincipal User user,
          @RequestParam(defaultValue = "0") int page,
          @RequestParam(defaultValue = "10") int size,
          @RequestParam(defaultValue = "latest") String sort
  ) {
-  Sort sortOption;
-  switch (sort.toLowerCase()) {
-   case "popular":
-    sortOption = Sort.by(Sort.Direction.DESC, "post.bookmarkCount");
-    break;
-   case "latest":
-   default:
-    sortOption = Sort.by(Sort.Direction.DESC, "createdAt");
-    break;
-  }
+  Sort sortOption = switch (sort.toLowerCase()) {
+   case "popular" -> Sort.by(Sort.Direction.DESC, "post.bookmarkCount");
+   default      -> Sort.by(Sort.Direction.DESC, "createdAt");
+  };
 
-  BookmarkResponsePage dto = bookmarkService.getMyBookmarks(
-          user.getId(), page, size, sortOption
-  );
-
-  if (dto.getContent().isEmpty()) {
-   dto.setEmptyMessage("더 많은 조합 보러가기");
-  }
-
-  return ResponseTemplate.ok(dto);
-
+  Page<BookmarkResponse> pageData = bookmarkService.getMyBookmarks(user.getId(), page, size, sortOption);
+  return ResponseTemplate.ok(pageData);
  }
 }

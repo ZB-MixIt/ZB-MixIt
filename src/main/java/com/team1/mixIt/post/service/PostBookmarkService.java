@@ -6,7 +6,6 @@ import com.team1.mixIt.common.code.ResponseCode;
 import com.team1.mixIt.common.exception.ClientException;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.response.BookmarkResponse;
-import com.team1.mixIt.post.dto.response.BookmarkResponsePage;
 import com.team1.mixIt.post.entity.UserBookmark;
 import com.team1.mixIt.post.entity.UserBookmarkId;
 import com.team1.mixIt.post.repository.PostLikeRepository;
@@ -80,9 +79,8 @@ public class PostBookmarkService {
             );
         }
     }
-
     @Transactional(readOnly = true)
-    public BookmarkResponsePage getMyBookmarks(
+    public Page<BookmarkResponse> getMyBookmarks(
             Long userId,
             int page,
             int size,
@@ -93,7 +91,7 @@ public class PostBookmarkService {
                 PageRequest.of(page, size, sort)
         );
 
-        Page<BookmarkResponse> content = ubPage.map(ub ->
+        Page<BookmarkResponse> responsePage = ubPage.map(ub ->
                 BookmarkResponse.fromEntity(
                         ub.getPost(),
                         userId,
@@ -105,12 +103,9 @@ public class PostBookmarkService {
                 )
         );
 
-        BookmarkResponsePage responsePage = BookmarkResponsePage.from(content);
-        if (responsePage.getContent().isEmpty()) {
-            responsePage.setEmptyMessage("더 많은 조합 보러가기");
-        }
         return responsePage;
     }
+
 
     @Transactional(readOnly = true)
     public boolean isBookmarked(Long postId, Long userId) {
