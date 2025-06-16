@@ -17,6 +17,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+
 @Slf4j
 @RestController
 @RequestMapping(
@@ -38,7 +40,24 @@ public class HomeFeedController {
     )
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
-    )
+    )    @GetMapping("/category/{category}")
+    public ResponseTemplate<Page<PostResponse>> category(
+            @AuthenticationPrincipal User user,
+            @PathVariable String category,
+            @RequestParam(required = false) String cursor,     // ISO 타임스탬프 (e.g. "2025-06-16T14:04:50")
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Long uid = currentUserId(user);
+        // cursor가 없으면 '지금'으로, 있으면 파싱
+        LocalDateTime lastCreatedAt = (cursor == null)
+                ? LocalDateTime.now()
+                : LocalDateTime.parse(cursor);
+        Page<PostResponse> page = feedService.getHomeByCategoryCursor(
+                uid, category, lastCreatedAt, size
+        );
+        return ResponseTemplate.ok(page);
+    }
+
 //    @GetMapping("/category/{category}")
 //    public ResponseTemplate<Page<PostResponse>> category(
 //            @AuthenticationPrincipal User user,
@@ -53,19 +72,6 @@ public class HomeFeedController {
 //                feedService.getHomeByCategory(uid, category, page, size, window)
 //        );
 //    }
-
-    @GetMapping("/category/{category}")
-    public ResponseTemplate<Page<PostResponse>> category(
-            @AuthenticationPrincipal User user,
-            @PathVariable String category,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
-    ) {
-        Long uid = currentUserId(user);
-        log.info(">>> currentUserId = {}", uid);
-        Page<PostResponse> posts = feedService.getHomeByCategory(uid, category, page, size);
-        return ResponseTemplate.ok(posts);
-    }
 
     @Operation(summary = "홈: 오늘의 인기 조회수 Top5",
             description = "당일(00:00~24:00) 조회수 순으로 상위 5개 게시물을 반환합니다.")

@@ -40,80 +40,58 @@ public class HomeFeedService {
     private final UserRepository userRepository;
 
 
-//    /**
-//     * 홈: 카테고리별 최신 게시물 (24h -> 7d -> 30d -> 전체)
-//     */
-//    @Transactional(readOnly = true)
-//    public Page<PostResponse> getHomeByCategory(
-//            Long currentUserId,
-//            String category,
-//            int page,
-//            int size,
-//            String forceWindow
-//    ) {
-//        Duration window;
-//        if (forceWindow == null) {
-//            window = pickWindow(category, size);
-//        } else {
-//            window = switch (forceWindow) {
-//                case "24h" -> Duration.ofHours(24);
-//                case "7d"  -> Duration.ofDays(7);
-//                case "30d" -> Duration.ofDays(30);
-//                default    -> null;
-//            };
-//        }
-//
-//        Pageable pg = PageRequest.of(page, size, Sort.by("createdAt").descending());
-//        Page<Post> posts;
-//        if (window != null) {
-//            LocalDateTime since = LocalDateTime.now().minus(window);
-//            posts = postRepository.findAll(
-//                    (root, query, cb) -> {
-//                        query.distinct(true);
-//                        return cb.and(
-//                                cb.equal(root.get("category"), category),
-//                                cb.greaterThanOrEqualTo(root.get("createdAt"), since)
-//                        );
-//                    },
-//                    pg
-//            );
-//
-//        } else {
-//            // 전체 기간 조회에도 DISTINCT 적용
-//            posts = postRepository.findAll(
-//                    (root, query, cb) -> {
-//                        query.distinct(true);
-//                        return cb.equal(root.get("category"), category);
-//                    },
-//                    pg
-//            );
-//        }
-//
-//        return mapPosts(posts, currentUserId);
-//    }
     /**
-     * 홈: 카테고리별 최신 게시물 (전체 기간)
+     * 홈: 카테고리별 최신 게시물 (24h -> 7d -> 30d -> 전체)
      */
     @Transactional(readOnly = true)
     public Page<PostResponse> getHomeByCategory(
             Long currentUserId,
             String category,
             int page,
-            int size
+            int size,
+            String forceWindow
     ) {
-        Pageable pg = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Duration window;
+        if (forceWindow == null) {
+            window = pickWindow(category, size);
+        } else {
+            window = switch (forceWindow) {
+                case "24h" -> Duration.ofHours(24);
+                case "7d"  -> Duration.ofDays(7);
+                case "30d" -> Duration.ofDays(30);
+                default    -> null;
+            };
+        }
 
-        // 전체 기간 조회에도 DISTINCT 적용
-        Page<Post> posts = postRepository.findAll(
-                (root, query, cb) -> {
-                    query.distinct(true);
-                    return cb.equal(root.get("category"), category);
-                },
-                pg
-        );
+        Pageable pg = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<Post> posts;
+        if (window != null) {
+            LocalDateTime since = LocalDateTime.now().minus(window);
+            posts = postRepository.findAll(
+                    (root, query, cb) -> {
+                        query.distinct(true);
+                        return cb.and(
+                                cb.equal(root.get("category"), category),
+                                cb.greaterThanOrEqualTo(root.get("createdAt"), since)
+                        );
+                    },
+                    pg
+            );
+
+        } else {
+            // 전체 기간 조회에도 DISTINCT 적용
+            posts = postRepository.findAll(
+                    (root, query, cb) -> {
+                        query.distinct(true);
+                        return cb.equal(root.get("category"), category);
+                    },
+                    pg
+            );
+        }
 
         return mapPosts(posts, currentUserId);
     }
+
 
     private Duration pickWindow(String category, int size) {
         // 24시간
@@ -315,6 +293,31 @@ public class HomeFeedService {
      * Page<Post> -> Page<PostResponse> 매핑 헬퍼
      */
     private Page<PostResponse> mapPosts(Page<Post> posts, Long currentUserId) {
+        return posts.map(p -> toDto(p, currentUserId));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PostResponse> getHomeByCategoryCursor(
+            Long currentUserId,
+            String category,
+            LocalDateTime cursor,  // ← 여기에 마지막으로 본 글의 createdAt
+            int size
+    ) {
+        // 정렬: createdAt DESC
+        Pageable pg = PageRequest.of(0, size, Sort.by("createdAt").descending());
+
+        // JPA Specification 을 써서 createdAt < cursor 조건 추가
+        Page<Post> posts = postRepository.findAll(
+                (root, query, cb) -> {
+                    query.distinct(true);
+                    return cb.and(
+                            cb.equal(root.get("category"), category),
+                            cb.lessThan(root.get("createdAt"), cursor)     // ← 커서 필터
+                    );
+                },
+                pg
+        );
+
         return posts.map(p -> toDto(p, currentUserId));
     }
 }
