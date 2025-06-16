@@ -15,10 +15,7 @@ import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.repository.UserRepository;
 import com.team1.mixIt.utils.ImageUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +23,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -204,22 +202,35 @@ public class HomeFeedService {
     /**
      * action 로그 집계 후 PostResponse로 매핑 (VIEW/BOOKMARK)
      */
+
+
     private Page<PostResponse> aggregateByAction(String action, Duration ago, Pageable pg, Long currentUserId) {
         LocalDateTime start = LocalDate.now().atStartOfDay().minus(ago.minusDays(1));
-        LocalDateTime end = LocalDate.now().atStartOfDay().plusDays(1);
+        LocalDateTime end   = LocalDate.now().atStartOfDay().plusDays(1);
 
-        Page<Long> ids = switch (action) {
-            case "VIEW" ->
-                    actionLogRepository.findTopViewedPostIds(start, end, pg);
-            case "BOOKMARK" ->
-                    actionLogRepository.findTopBookmarkedPostIds(start, end, pg);
-            default -> Page.empty(pg);
+        // 원본 ID 페이지 조회
+        Page<Long> rawIds = switch (action) {
+            case "VIEW"     -> actionLogRepository.findTopViewedPostIds(start, end, pg);
+            case "BOOKMARK" -> actionLogRepository.findTopBookmarkedPostIds(start, end, pg);
+            default         -> Page.empty(pg);
         };
 
-        return ids.map(id -> toDto(
-                postRepository.findById(id).orElseThrow(), currentUserId
-        ));
+        // 중복 제거
+        List<Long> distinctIds = rawIds.getContent().stream()
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 실제 DTO 변환
+        List<PostResponse> dtos = distinctIds.stream()
+                .map(id -> postRepository.findById(id)
+                        .map(p -> toDto(p, currentUserId))
+                        .orElseThrow(() -> new IllegalStateException("Post not found: " + id)))
+                .collect(Collectors.toList());
+
+        // PageImpl 으로 새로 페이징 정보 생성
+        return new PageImpl<>(dtos, pg, distinctIds.size());
     }
+
 
     /**
      * Post -> PostResponse 변환 헬퍼
