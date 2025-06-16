@@ -94,16 +94,21 @@ public class HomeFeedController {
         );
     }
 
-    @Operation(summary = "홈: 인기 조합 더보기",
-            description = "당일 조회수 기준 게시물 목록을 무한 스크롤 형식으로 반환합니다.")
+    @Operation(
+            summary = "홈: 인기 조합 더보기",
+            description = "당일 조회수 기준 게시물 목록을 무한 스크롤 형식으로 반환합니다."
+    )
+    @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
+    )
     @GetMapping("/popular/combos")
-    public InfinitePage<PostResponse> popularCombos(
+    public ResponseTemplate<InfinitePage<PostResponse>> popularCombos(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         Page<PostResponse> pg = feedService.getPopularCombos(currentUserId(user), page, size);
-        return toInfinitePage(pg);
+        return ResponseTemplate.ok(toInfinitePage(pg));
     }
 
     @Operation(summary = "홈: 오늘의 추천 북마크 Top4",
@@ -120,18 +125,22 @@ public class HomeFeedController {
         );
     }
 
-
-    @Operation(summary = "홈: 추천 게시물 더보기",
-            description = "당일 북마크 기준 게시물 목록을 무한 스크롤 형식으로 반환합니다.")
+    @Operation(
+            summary = "홈: 추천 게시물 더보기",
+            description = "당일 북마크 기준 게시물 목록을 무한 스크롤 형식으로 반환합니다."
+    )
+    @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
+    )
     @GetMapping("/recommendations/today")
-    public InfinitePage<PostResponse> recommendedToday(
+    public ResponseTemplate<InfinitePage<PostResponse>> recommendedToday(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         HomeFeedResponse rec = feedService.getTodayRecommendations(currentUserId(user), page, size);
         Page<PostResponse> pg = rec.getPosts();
-        return toInfinitePage(pg);
+        return ResponseTemplate.ok(toInfinitePage(pg));
     }
 
     private <T> InfinitePage<T> toInfinitePage(Page<T> pg) {
