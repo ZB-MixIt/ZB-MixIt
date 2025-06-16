@@ -66,21 +66,6 @@ public class HomeFeedController {
         return ResponseTemplate.ok(inf);
     }
 
-//    @GetMapping("/category/{category}")
-//    public ResponseTemplate<Page<PostResponse>> category(
-//            @AuthenticationPrincipal User user,
-//            @PathVariable String category,
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "20") int size,
-//            @RequestParam(required = false) String window
-//    ) {
-//        Long uid = currentUserId(user);
-//        log.info(">>> currentUserId = {}, window = {}", uid, window);
-//        return ResponseTemplate.ok(
-//                feedService.getHomeByCategory(uid, category, page, size, window)
-//        );
-//    }
-
     @Operation(summary = "홈: 오늘의 인기 조회수 Top5",
             description = "당일(00:00~24:00) 조회수 순으로 상위 5개 게시물을 반환합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공",
@@ -110,19 +95,25 @@ public class HomeFeedController {
     }
 
     @Operation(summary = "홈: 인기 조합 더보기",
-            description = "당일 조회수 기준 게시물 목록을 페이징하여 반환합니다.")
-    @ApiResponse(responseCode = "200", description = "조회 성공",
-            content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
-    )
+            description = "당일 조회수 기준 게시물 목록을 무한 스크롤 형식으로 반환합니다.")
     @GetMapping("/popular/combos")
-    public ResponseTemplate<Page<PostResponse>> popularCombos(
+    public ResponseTemplate<InfinitePage<PostResponse>> popularCombos(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseTemplate.ok(
-                feedService.getTodayTopViewed(currentUserId(user), page, size)
-        );
+        Page<PostResponse> pageData = feedService.getPopularCombos(currentUserId(user), page, size);
+
+        InfinitePage<PostResponse> inf = new InfinitePage<>();
+        inf.setPage(pageData.getNumber());
+        inf.setSize(pageData.getSize());
+        inf.setTotalPages(pageData.getTotalPages());
+        inf.setTotalElements(pageData.getTotalElements());
+        inf.setContent(pageData.getContent());
+        inf.setEmptyMessage(pageData.hasContent() ? null : "게시물이 없습니다");
+        inf.setNextPage(pageData.hasNext() ? pageData.getNumber() + 1 : null);
+
+        return ResponseTemplate.ok(inf);
     }
 
     @Operation(summary = "홈: 오늘의 추천 북마크 Top4",
@@ -139,20 +130,28 @@ public class HomeFeedController {
         );
     }
 
+
     @Operation(summary = "홈: 추천 게시물 더보기",
-            description = "당일 북마크 기준 게시물 목록을 페이징하여 반환합니다.")
-    @ApiResponse(responseCode = "200", description = "조회 성공",
-            content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
-    )
+            description = "당일 북마크 기준 게시물 목록을 무한 스크롤 형식으로 반환합니다.")
     @GetMapping("/recommendations/today")
-    public ResponseTemplate<HomeFeedResponse> recommendedToday(
+    public ResponseTemplate<InfinitePage<PostResponse>> recommendedToday(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseTemplate.ok(
-                feedService.getTodayRecommendations(currentUserId(user), page, size)
-        );
+        HomeFeedResponse rec = feedService.getTodayRecommendations(currentUserId(user), page, size);
+        Page<PostResponse> pageData = rec.getPosts();
+
+        InfinitePage<PostResponse> inf = new InfinitePage<>();
+        inf.setPage(pageData.getNumber());
+        inf.setSize(pageData.getSize());
+        inf.setTotalPages(pageData.getTotalPages());
+        inf.setTotalElements(pageData.getTotalElements());
+        inf.setContent(pageData.getContent());
+        inf.setEmptyMessage(pageData.hasContent() ? null : "게시물이 없습니다");
+        inf.setNextPage(pageData.hasNext() ? pageData.getNumber() + 1 : null);
+
+        return ResponseTemplate.ok(inf);
     }
 
 }
