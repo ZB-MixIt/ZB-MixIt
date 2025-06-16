@@ -43,11 +43,14 @@ public class HomeFeedController {
     @GetMapping({ "/category/{category}", "/category" })
     public ResponseTemplate<InfinitePage<PostResponse>> category(
             @AuthenticationPrincipal User user,
-            @RequestParam String category,
+            @PathVariable(name = "category", required = false) String pathCategory,
+            @RequestParam(name = "category", required = false) String queryCategory,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sort
     ) {
+        String category = pathCategory != null ? pathCategory : queryCategory;
+
         Page<PostResponse> posts = feedService.getHomeByCategory(
                 currentUserId(user), category, page, size, sort
         );
