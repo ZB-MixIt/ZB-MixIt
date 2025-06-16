@@ -1,5 +1,6 @@
 package com.team1.mixIt.post.controller;
 
+import com.team1.mixIt.common.dto.InfinitePage;
 import com.team1.mixIt.common.dto.ResponseTemplate;
 import com.team1.mixIt.post.dto.response.HomeFeedResponse;
 import com.team1.mixIt.post.dto.response.PostResponse;
@@ -16,8 +17,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
 
 @Slf4j
 @RestController
@@ -40,23 +39,31 @@ public class HomeFeedController {
     )
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
-    )    @GetMapping("/category/{category}")
-    public ResponseTemplate<Page<PostResponse>> category(
+    )
+    @GetMapping("/category/{category}")
+    public ResponseTemplate<InfinitePage<PostResponse>> category(
             @AuthenticationPrincipal User user,
             @PathVariable String category,
-            @RequestParam(required = false) String cursor,     // ISO 타임스탬프 (e.g. "2025-06-16T14:04:50")
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String window
     ) {
         Long uid = currentUserId(user);
-        // cursor가 없으면 '지금'으로, 있으면 파싱
-        LocalDateTime lastCreatedAt = (cursor == null)
-                ? LocalDateTime.now()
-                : LocalDateTime.parse(cursor);
-        Page<PostResponse> page = feedService.getHomeByCategoryCursor(
-                uid, category, lastCreatedAt, size
-        );
-        return ResponseTemplate.ok(page);
+        Page<PostResponse> posts = feedService.getHomeByCategory(uid, category, page, size, window);
+
+        // InfinitePage로 변환
+        InfinitePage<PostResponse> inf = new InfinitePage<>();
+        inf.setPage(posts.getNumber());
+        inf.setSize(posts.getSize());
+        inf.setTotalPages(posts.getTotalPages());
+        inf.setTotalElements(posts.getTotalElements());
+        inf.setContent(posts.getContent());
+        inf.setEmptyMessage(posts.hasContent() ? null : "게시물이 없습니다");
+        inf.setNextPage(posts.hasNext() ? posts.getNumber() + 1 : null);
+
+        return ResponseTemplate.ok(inf);
     }
+
 
 //    @GetMapping("/category/{category}")
 //    public ResponseTemplate<Page<PostResponse>> category(
