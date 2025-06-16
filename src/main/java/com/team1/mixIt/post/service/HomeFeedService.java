@@ -1,6 +1,7 @@
 package com.team1.mixIt.post.service;
 
 import com.team1.mixIt.actionlog.repository.ActionLogRepository;
+import com.team1.mixIt.common.dto.InfinitePage;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.response.HomeFeedResponse;
 import com.team1.mixIt.post.dto.response.PostResponse;
@@ -138,7 +139,6 @@ public class HomeFeedService {
      */
     @Transactional(readOnly = true)
     public Page<PostResponse> getWeeklyTopViewed(Long currentUserId, int page, int size) {
-        // 이번 주(7일) 집계만 하고, 부족해도 추가 fallback 없이 그대로 넘겨요.
         return aggregateByAction("VIEW", Duration.ofDays(7),
                 PageRequest.of(page, size, Sort.unsorted()), currentUserId);
     }
@@ -148,6 +148,15 @@ public class HomeFeedService {
      */
     public Page<PostResponse> getPopularCombos(Long currentUserId, int page, int size) {
         return getTodayTopViewed(currentUserId, page, size);
+    }
+
+    // 새로 추가할 오버로드
+    public Page<PostResponse> getPopularCombos(Long currentUserId, Pageable pageable) {
+        return getPopularCombos(
+                currentUserId,
+                pageable.getPageNumber(),
+                pageable.getPageSize()
+        );
     }
 
     /**
@@ -186,9 +195,10 @@ public class HomeFeedService {
      */
     @Transactional(readOnly = true)
     public HomeFeedResponse getTodayRecommendations(Long currentUserId, int page, int size) {
-        Page<PostResponse> posts = getTodayTopBookmarked(currentUserId, page, size);
+        Page<PostResponse> pg = getTodayTopBookmarked(currentUserId, page, size);
+        InfinitePage<PostResponse> inf = toInfinitePage(pg);
         List<TagStatResponse> tags = tagStatsService.getTopTags(10);
-        return new HomeFeedResponse(posts, tags);
+        return new HomeFeedResponse(inf, tags);
     }
 
     /**
@@ -215,7 +225,7 @@ public class HomeFeedService {
      * Post -> PostResponse 변환 헬퍼
      */
     private PostResponse toDto(Post p, Long currentUserId) {
-        // 1) 이미지 리스트
+        // 이미지 리스트
         List<PostResponse.ImageDto> imgDtos = p.getImageIds().stream()
                 .map(imageService::findById)
                 .map(img -> new PostResponse.ImageDto(img.getId(), img.getUrl()))
@@ -226,7 +236,7 @@ public class HomeFeedService {
                 ? ImageUtils.getDefaultImageUrl()
                 : imgDtos.get(0).getSrc();
 
-        // 2) 좋아요/북마크/별점 상태
+        // 좋아요/북마크/별점 상태
         long likeCount = postLikeRepository.countByPostId(p.getId());
         boolean hasLiked = currentUserId != null
                 && postLikeRepository.findByPostIdAndUserId(p.getId(), currentUserId).isPresent();
@@ -234,7 +244,7 @@ public class HomeFeedService {
                 && postBookmarkService.isBookmarked(p.getId(), currentUserId);
         RatingResponse rating = ratingService.getRatingResponse(p.getId());
 
-        // 3) 작성자 정보는 바로 로드
+        // 작성자 정보는 바로 로드
         User author = userRepository.findById(p.getUserId())
                 .orElseThrow(() -> new IllegalStateException("작성자 정보 없음"));
         String authorNickname = author.getNickname();
@@ -242,7 +252,7 @@ public class HomeFeedService {
                 ? author.getProfileImage().getUrl()
                 : null;
 
-        // 4) DTO 빌드
+        // DTO 빌드
         return PostResponse.builder()
                 .id(p.getId())
                 .userId(p.getUserId())
@@ -296,5 +306,17 @@ public class HomeFeedService {
         );
 
         return posts.map(p -> toDto(p, currentUserId));
+    }
+
+    private <T> InfinitePage<T> toInfinitePage(Page<T> pg) {
+        InfinitePage<T> inf = new InfinitePage<>();
+        inf.setPage(pg.getNumber());
+        inf.setSize(pg.getSize());
+        inf.setTotalPages(pg.getTotalPages());
+        inf.setTotalElements(pg.getTotalElements());
+        inf.setContent(pg.getContent());
+        inf.setEmptyMessage(pg.hasContent() ? null : "게시물이 없습니다");
+        inf.setNextPage(pg.hasNext() ? pg.getNumber() + 1 : null);
+        return inf;
     }
 }

@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +34,7 @@ public class HomeFeedController {
     private Long currentUserId(@AuthenticationPrincipal User user) {
         return user != null ? user.getId() : null;
     }
+
     @Operation(
             summary = "홈: 카테고리별 최신 게시물",
             description = "카페·음식점·편의점·기타 각 탭용, 최근 24시간 내 등록된 최신 게시물을 페이징하여 반환합니다."
@@ -40,7 +42,7 @@ public class HomeFeedController {
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
     )
-    @GetMapping({ "/category/{category}", "/category" })
+    @GetMapping({"/category/{category}", "/category"})
     public ResponseTemplate<InfinitePage<PostResponse>> category(
             @AuthenticationPrincipal User user,
             @PathVariable(name = "category", required = false) String pathCategory,
@@ -76,7 +78,7 @@ public class HomeFeedController {
             @AuthenticationPrincipal User user
     ) {
         return ResponseTemplate.ok(
-                feedService.getTodayTopViewed(currentUserId(user),0, 5)
+                feedService.getTodayTopViewed(currentUserId(user), 0, 5)
         );
     }
 
@@ -90,7 +92,7 @@ public class HomeFeedController {
             @AuthenticationPrincipal User user
     ) {
         return ResponseTemplate.ok(
-                feedService.getWeeklyTopViewed(currentUserId(user),0, 5)
+                feedService.getWeeklyTopViewed(currentUserId(user), 0, 5)
         );
     }
 
@@ -104,10 +106,12 @@ public class HomeFeedController {
     @GetMapping("/popular/combos")
     public ResponseTemplate<InfinitePage<PostResponse>> popularCombos(
             @AuthenticationPrincipal User user,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            Pageable pageable
     ) {
-        Page<PostResponse> pg = feedService.getPopularCombos(currentUserId(user), page, size);
+        Page<PostResponse> pg = feedService.getPopularCombos(
+                currentUserId(user),
+                pageable
+        );
         return ResponseTemplate.ok(toInfinitePage(pg));
     }
 
@@ -133,14 +137,15 @@ public class HomeFeedController {
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
     )
     @GetMapping("/recommendations/today")
-    public ResponseTemplate<InfinitePage<PostResponse>> recommendedToday(
+    public ResponseTemplate<HomeFeedResponse> recommendedToday(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        HomeFeedResponse rec = feedService.getTodayRecommendations(currentUserId(user), page, size);
-        Page<PostResponse> pg = rec.getPosts();
-        return ResponseTemplate.ok(toInfinitePage(pg));
+        HomeFeedResponse rec = feedService.getTodayRecommendations(
+                currentUserId(user), page, size
+        );
+        return ResponseTemplate.ok(rec);
     }
 
     private <T> InfinitePage<T> toInfinitePage(Page<T> pg) {
