@@ -6,6 +6,9 @@ import com.team1.mixIt.common.code.ResponseCode;
 import com.team1.mixIt.common.exception.ClientException;
 import com.team1.mixIt.image.service.ImageService;
 import com.team1.mixIt.post.dto.response.BookmarkResponse;
+import com.team1.mixIt.post.dto.response.PostResponse;
+import com.team1.mixIt.post.dto.response.RatingResponse;
+import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.entity.UserBookmark;
 import com.team1.mixIt.post.entity.UserBookmarkId;
 import com.team1.mixIt.post.repository.PostLikeRepository;
@@ -21,6 +24,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -104,6 +109,45 @@ public class PostBookmarkService {
         );
 
         return responsePage;
+    }
+    @Transactional(readOnly = true)
+    public Page<PostResponse> getMyBookmarksAsPostResponse(
+            Long userId,
+            int page,
+            int size,
+            Sort sort
+    ) {
+        return userBookmarkRepository.findAllByIdUserId(
+                userId,
+                PageRequest.of(page, size, sort)
+        ).map(ub -> {
+            Post p = ub.getPost();
+
+            // 평균 평점 & 평점 개수
+            BigDecimal avgBd = postRatingRepository.findAverageRateByPostId(p.getId());
+            if (avgBd == null) {
+                avgBd = BigDecimal.ZERO;
+            }
+            long cnt = postRatingRepository.countByPostId(p.getId());
+            RatingResponse rating = new RatingResponse(avgBd, cnt);
+
+            // 좋아요 수
+            long likeCount = postLikeRepository.countByPostId(p.getId());
+            boolean hasLiked = postLikeRepository
+                    .findByPostIdAndUserId(p.getId(), userId)
+                    .isPresent();
+
+            return PostResponse.fromEntity(
+                    p,
+                    userId,
+                    defaultImageUrl,
+                    imageService,
+                    this,
+                    rating,
+                    likeCount,
+                    hasLiked
+            );
+        });
     }
 
 

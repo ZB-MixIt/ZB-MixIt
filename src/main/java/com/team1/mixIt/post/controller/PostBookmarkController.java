@@ -1,8 +1,7 @@
 package com.team1.mixIt.post.controller;
 
 import com.team1.mixIt.common.dto.ResponseTemplate;
-import com.team1.mixIt.post.dto.response.BookmarkResponse;
-import com.team1.mixIt.post.dto.response.BookmarkResponsePage;
+import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.service.PostBookmarkService;
 import com.team1.mixIt.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
@@ -73,22 +72,23 @@ public class PostBookmarkController {
          description = "북마크 목록 조회 성공",
          content = @Content(
                  mediaType = "application/json",
-                 schema = @Schema(implementation = BookmarkResponsePage.class)
+                 schema = @Schema(implementation = ResponseTemplate.class)
          )
  )
  @GetMapping("/users/me/bookmarks")
- public ResponseTemplate<Page<BookmarkResponse>> list(
+ public ResponseTemplate<Page<PostResponse>> list(
          @AuthenticationPrincipal User user,
          @RequestParam(defaultValue = "0") int page,
          @RequestParam(defaultValue = "10") int size,
          @RequestParam(defaultValue = "latest") String sort
  ) {
-  Sort sortOption = switch (sort.toLowerCase()) {
-   case "popular" -> Sort.by(Sort.Direction.DESC, "post.bookmarkCount");
-   default      -> Sort.by(Sort.Direction.DESC, "createdAt");
-  };
+  Sort sortOption = "popular".equalsIgnoreCase(sort)
+          ? Sort.by(Sort.Direction.DESC, "post.bookmarkCount")
+          : Sort.by(Sort.Direction.DESC, "createdAt");
 
-  Page<BookmarkResponse> pageData = bookmarkService.getMyBookmarks(user.getId(), page, size, sortOption);
-  return ResponseTemplate.ok(pageData);
+  Page<PostResponse> posts = bookmarkService.getMyBookmarksAsPostResponse(
+          user.getId(), page, size, sortOption
+  );
+  return ResponseTemplate.ok(posts);
  }
 }
