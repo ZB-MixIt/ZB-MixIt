@@ -40,7 +40,7 @@ public class HomeFeedController {
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
     )
-    @GetMapping("/category")
+    @GetMapping({ "/category/{category}", "/category" })
     public ResponseTemplate<InfinitePage<PostResponse>> category(
             @AuthenticationPrincipal User user,
             @RequestParam String category,
