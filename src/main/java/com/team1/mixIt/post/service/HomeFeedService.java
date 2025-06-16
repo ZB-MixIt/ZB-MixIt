@@ -215,56 +215,55 @@ public class HomeFeedService {
      * Post -> PostResponse 변환 헬퍼
      */
     private PostResponse toDto(Post p, Long currentUserId) {
-        // 이미지 리스트(ImageDto)
+        // 1) 이미지 리스트
         List<PostResponse.ImageDto> imgDtos = p.getImageIds().stream()
                 .map(imageService::findById)
                 .map(img -> new PostResponse.ImageDto(img.getId(), img.getUrl()))
                 .toList();
 
-        // 대표 이미지 URL: 이미지가 없으면 기본 URL
-        String defaultImageUrl;
-        if (!p.getImageIds().isEmpty()) {
-            Long firstImageId = p.getImageIds().get(0);
-            defaultImageUrl = imageService.findById(firstImageId).getUrl();
-        } else {
-            defaultImageUrl = ImageUtils.getDefaultImageUrl();
-        }
+        // 대표 이미지
+        String defaultImageUrl = imgDtos.isEmpty()
+                ? ImageUtils.getDefaultImageUrl()
+                : imgDtos.get(0).getSrc();
 
-        // 좋아요 수와 현재 유저가 눌렀는지 여부
+        // 2) 좋아요/북마크/별점 상태
         long likeCount = postLikeRepository.countByPostId(p.getId());
-        boolean hasLiked = (currentUserId != null) &&
-                postLikeRepository.findByPostIdAndUserId(p.getId(), currentUserId).isPresent();
+        boolean hasLiked = currentUserId != null
+                && postLikeRepository.findByPostIdAndUserId(p.getId(), currentUserId).isPresent();
+        boolean hasBookmarked = currentUserId != null
+                && postBookmarkService.isBookmarked(p.getId(), currentUserId);
+        RatingResponse rating = ratingService.getRatingResponse(p.getId());
 
-        // 별점 정보
-        RatingResponse ratingResp = ratingService.getRatingResponse(p.getId());
-
-        // 작성자 정보: User 엔티티에서 닉네임과 프로필 이미지 조회
+        // 3) 작성자 정보는 바로 로드
         User author = userRepository.findById(p.getUserId())
                 .orElseThrow(() -> new IllegalStateException("작성자 정보 없음"));
         String authorNickname = author.getNickname();
-        String authorProfileImage = null;
-        if (author.getProfileImage() != null) {
-            authorProfileImage = author.getProfileImage().getUrl();
-        }
+        String authorProfileImage = author.getProfileImage() != null
+                ? author.getProfileImage().getUrl()
+                : null;
 
-        // 북마크 여부
-        boolean hasBookmarked = (currentUserId != null) &&
-                postBookmarkService.isBookmarked(p.getId(), currentUserId);
-
-        // 작성자 여부 판정
-        boolean isAuthor = (currentUserId != null) && p.getUserId().equals(currentUserId);
-
-        // 최종 빌드
-        return PostResponse.fromEntity(
-                p,
-                currentUserId,
-                defaultImageUrl,
-                imageService,
-                postBookmarkService,
-                ratingResp,
-                likeCount,
-                hasLiked
-        );
+        // 4) DTO 빌드
+        return PostResponse.builder()
+                .id(p.getId())
+                .userId(p.getUserId())
+                .authorNickname(authorNickname)
+                .authorProfileImage(authorProfileImage)
+                .category(p.getCategory())
+                .title(p.getTitle())
+                .content(p.getContent())
+                .images(imgDtos)
+                .defaultImage(defaultImageUrl)
+                .viewCount(p.getViewCount())
+                .hasLiked(hasLiked)
+                .hasBookmarked(hasBookmarked)
+                .likeCount(likeCount)
+                .bookmarkCount(p.getBookmarkCount())
+                .tags(p.getHashtag().stream().map(h -> h.getHashtag()).toList())
+                .isAuthor(currentUserId != null && p.getUserId().equals(currentUserId))
+                .rating(rating)
+                .createdAt(p.getCreatedAt())
+                .updatedAt(p.getModifiedAt())
+                .build();
     }
 
     /**
