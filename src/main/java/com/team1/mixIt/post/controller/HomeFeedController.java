@@ -150,12 +150,17 @@ public class HomeFeedController {
     public ResponseTemplate<Map<String, Object>> recommendedToday(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "5") int size
     ) {
-        Page<PostResponse> posts = feedService.getTodayRecommendationsPosts(
-                currentUserId(user), page, size);
+        int fetchSize = page == 0 ? Math.min(size, 5) : 20;
 
-        // 2) InfinitePage로 감싸기
+
+        Page<PostResponse> posts = feedService.getTodayRecommendationsPosts(
+                currentUserId(user),
+                page,
+                fetchSize
+        );
+
         InfinitePage<PostResponse> inf = new InfinitePage<>();
         inf.setPage(posts.getNumber());
         inf.setSize(posts.getSize());
