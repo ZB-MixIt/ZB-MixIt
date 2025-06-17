@@ -126,22 +126,29 @@ public class HomeFeedController {
         );
     }
 
-    @Operation(summary = "홈: 추천 게시물 더보기 (페이징)",
-            description = "당일 북마크 기준 게시물 목록을 페이징하여 반환합니다.")
-    @ApiResponse(responseCode = "200", description = "조회 성공",
+    @Operation(
+            summary = "홈: 추천 게시물 더보기 (페이징)",
+            description = "당일 북마크 기준 게시물 목록을 페이징하여 반환합니다."
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
     )
     @GetMapping("/recommendations/today")
-    public ResponseTemplate<Page<PostResponse>> recommendedToday(
+    public ResponseTemplate<InfinitePage<PostResponse>> recommendedToday(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseTemplate.ok(
-                feedService.getTodayTopBookmarked(currentUserId(user), page, size)
+        Page<PostResponse> pg = feedService.getTodayTopBookmarked(
+                currentUserId(user),
+                page,
+                size
         );
+        InfinitePage<PostResponse> inf = toInfinitePage(pg);
+        return ResponseTemplate.ok(inf);
     }
-
 
     private <T> InfinitePage<T> toInfinitePage(Page<T> pg) {
         InfinitePage<T> inf = new InfinitePage<>();
