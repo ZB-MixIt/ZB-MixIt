@@ -154,7 +154,7 @@ public class HomeFeedService {
 
         // 월간 (30d)
         Page<PostResponse> month = aggregateByAction("VIEW", Duration.ofDays(30), PageRequest.of(page, size, Sort.unsorted()), userId);
-        if (month.hasContent()) return month;
+        if (month.getNumberOfElements() == size) return month;
 
         // 전체 조회수 순 fallback
         return postRepository.findAll(
@@ -185,7 +185,7 @@ public class HomeFeedService {
         if (week.getNumberOfElements() == size) return week;
 
         Page<PostResponse> month = aggregateByAction("BOOKMARK", Duration.ofDays(30), pg, currentUserId);
-        if (month.hasContent()) return month;
+        if (month.getNumberOfElements() == size) return month;
 
         // fallback: 전체 bookmarkCount 순
         return postRepository.findAll(
@@ -219,7 +219,7 @@ public class HomeFeedService {
         }
 
         Page<PostResponse> month = aggregateByAction("BOOKMARK", Duration.ofDays(30), PageRequest.of(page, size, Sort.unsorted()), userId);
-        if (month.hasContent()) {
+        if (month.getNumberOfElements() == size) {
             return new HomeFeedResponse(toInfinitePage(month), tagStatsService.getTopTags(10));
         }
 
@@ -331,7 +331,7 @@ public class HomeFeedService {
     public Page<PostResponse> getHomeByCategoryCursor(
             Long currentUserId,
             String category,
-            LocalDateTime cursor,  // ← 여기에 마지막으로 본 글의 createdAt
+            LocalDateTime cursor,
             int size
     ) {
         // 정렬: createdAt DESC
@@ -343,7 +343,7 @@ public class HomeFeedService {
                     query.distinct(true);
                     return cb.and(
                             cb.equal(root.get("category"), category),
-                            cb.lessThan(root.get("createdAt"), cursor)     // ← 커서 필터
+                            cb.lessThan(root.get("createdAt"), cursor)
                     );
                 },
                 pg
