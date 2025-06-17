@@ -126,7 +126,12 @@ public class HomeFeedService {
 
         // fallback: 전체 viewCount 컬럼 순
         return postRepository.findAll(
-                PageRequest.of(page, size, Sort.by("viewCount").descending())
+                PageRequest.of(page, size,  Sort.by(
+                                Sort.Order.desc("viewCount"),
+                                Sort.Order.desc("createdAt"),
+                                Sort.Order.desc("id")
+                        )
+                )
         ).map(p -> toDto(p, currentUserId));
     }
 
@@ -165,8 +170,17 @@ public class HomeFeedService {
 
         // fallback: 전체 bookmarkCount 순
         return postRepository.findAll(
-                PageRequest.of(page, size, Sort.by("bookmarkCount").descending())
-        ).map(p -> toDto(p, currentUserId));
+                        PageRequest.of(
+                                page,
+                                size,
+                                Sort.by(
+                                        Sort.Order.desc("bookmarkCount"),
+                                        Sort.Order.desc("createdAt"),
+                                        Sort.Order.desc("id")
+                                )
+                        )
+                )
+                .map(p -> toDto(p, currentUserId));
     }
 
     /**
