@@ -166,7 +166,7 @@ public class HomeFeedService {
         if (week.getNumberOfElements() == size) return week;
 
         Page<PostResponse> month = aggregateByAction("BOOKMARK", Duration.ofDays(30), pg, currentUserId);
-        if (month.hasContent()) return month;
+        if (month.getNumberOfElements() == size) return month;
 
         // fallback: 전체 bookmarkCount 순
         return postRepository.findAll(
