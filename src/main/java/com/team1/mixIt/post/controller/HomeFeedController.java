@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
@@ -104,14 +105,22 @@ public class HomeFeedController {
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
     )
+
     @GetMapping("/popular/combos")
     public ResponseTemplate<InfinitePage<PostResponse>> popularCombos(
             @AuthenticationPrincipal User user,
             @PageableDefault(size = 20) Pageable pageable
     ) {
+        // 클라이언트가 뭘 넘기든지 size = 20 으로 고정
+        Pageable fixed = PageRequest.of(
+                pageable.getPageNumber(),
+                20,
+                pageable.getSort()
+        );
+
         Page<PostResponse> pg = feedService.getPopularCombos(
                 currentUserId(user),
-                pageable
+                fixed
         );
         return ResponseTemplate.ok(toInfinitePage(pg));
     }
@@ -140,11 +149,13 @@ public class HomeFeedController {
     @GetMapping("/recommendations/today")
     public ResponseTemplate<HomeFeedResponse> recommendedToday(
             @AuthenticationPrincipal User user,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "0") int page
     ) {
+        // size 파라미터는 무시하고 항상 20
         HomeFeedResponse rec = feedService.getTodayRecommendations(
-                currentUserId(user), page, size
+                currentUserId(user),
+                page,
+                20
         );
         return ResponseTemplate.ok(rec);
     }

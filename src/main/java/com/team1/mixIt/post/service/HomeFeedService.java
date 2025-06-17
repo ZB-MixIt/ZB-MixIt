@@ -9,6 +9,7 @@ import com.team1.mixIt.post.dto.response.RatingResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.repository.PostLikeRepository;
 import com.team1.mixIt.post.repository.PostRepository;
+import com.team1.mixIt.tag.dto.response.TagStatResponse;
 import com.team1.mixIt.tag.service.TagStatsService;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.repository.UserRepository;
@@ -143,23 +144,8 @@ public class HomeFeedService {
     /**
      * 홈: 인기 조합 더보기 (동일 as 오늘의 인기 조회수, but pageable)
      */
-    public Page<PostResponse> getPopularCombos(Long userId, int page, int size) {
-        // 오늘 (1d)
-        Page<PostResponse> today = aggregateByAction("VIEW", Duration.ofDays(1), PageRequest.of(page, size, Sort.unsorted()), userId);
-        if (today.getNumberOfElements() == size) return today;
-
-        // 주간 (7d)
-        Page<PostResponse> week = aggregateByAction("VIEW", Duration.ofDays(7), PageRequest.of(page, size, Sort.unsorted()), userId);
-        if (week.getNumberOfElements() == size) return week;
-
-        // 월간 (30d)
-        Page<PostResponse> month = aggregateByAction("VIEW", Duration.ofDays(30), PageRequest.of(page, size, Sort.unsorted()), userId);
-        if (month.getNumberOfElements() == size) return month;
-
-        // 전체 조회수 순 fallback
-        return postRepository.findAll(
-                PageRequest.of(page, size, Sort.by("viewCount").descending())
-        ).map(p -> toDto(p, userId));
+    public Page<PostResponse> getPopularCombos(Long currentUserId, int page, int size) {
+        return getTodayTopViewed(currentUserId, page, size);
     }
 
     // 새로 추가할 오버로드
@@ -185,7 +171,7 @@ public class HomeFeedService {
         if (week.getNumberOfElements() == size) return week;
 
         Page<PostResponse> month = aggregateByAction("BOOKMARK", Duration.ofDays(30), pg, currentUserId);
-        if (month.getNumberOfElements() == size) return month;
+        if (month.hasContent()) return month;
 
         // fallback: 전체 bookmarkCount 순
         return postRepository.findAll(
@@ -206,31 +192,12 @@ public class HomeFeedService {
      * 홈: 추천 탭 (오늘 북마크된 게시물 + 인기 태그 10개)
      */
     @Transactional(readOnly = true)
-    public HomeFeedResponse getTodayRecommendations(Long userId, int page, int size) {
-        // 1) 1일, 7일, 30일 순으로 집계
-        Page<PostResponse> today = aggregateByAction("BOOKMARK", Duration.ofDays(1), PageRequest.of(page, size, Sort.unsorted()), userId);
-        if (today.getNumberOfElements() == size) {
-            return new HomeFeedResponse(toInfinitePage(today), tagStatsService.getTopTags(10));
-        }
-
-        Page<PostResponse> week = aggregateByAction("BOOKMARK", Duration.ofDays(7), PageRequest.of(page, size, Sort.unsorted()), userId);
-        if (week.getNumberOfElements() == size) {
-            return new HomeFeedResponse(toInfinitePage(week), tagStatsService.getTopTags(10));
-        }
-
-        Page<PostResponse> month = aggregateByAction("BOOKMARK", Duration.ofDays(30), PageRequest.of(page, size, Sort.unsorted()), userId);
-        if (month.getNumberOfElements() == size) {
-            return new HomeFeedResponse(toInfinitePage(month), tagStatsService.getTopTags(10));
-        }
-
-        // 2) 최종 fallback: 전체 bookmarkCount 순
-        Page<PostResponse> fallback = postRepository.findAll(
-                PageRequest.of(page, size, Sort.by("bookmarkCount").descending())
-        ).map(p -> toDto(p, userId));
-
-        return new HomeFeedResponse(toInfinitePage(fallback), tagStatsService.getTopTags(10));
+    public HomeFeedResponse getTodayRecommendations(Long currentUserId, int page, int size) {
+        Page<PostResponse> pg = getTodayTopBookmarked(currentUserId, page, size);
+        InfinitePage<PostResponse> inf = toInfinitePage(pg);
+        List<TagStatResponse> tags = tagStatsService.getTopTags(10);
+        return new HomeFeedResponse(inf, tags);
     }
-
 
     /**
      * action 로그 집계 후 PostResponse로 매핑 (VIEW/BOOKMARK)
@@ -331,7 +298,7 @@ public class HomeFeedService {
     public Page<PostResponse> getHomeByCategoryCursor(
             Long currentUserId,
             String category,
-            LocalDateTime cursor,
+            LocalDateTime cursor,  // ← 여기에 마지막으로 본 글의 createdAt
             int size
     ) {
         // 정렬: createdAt DESC
@@ -343,7 +310,7 @@ public class HomeFeedService {
                     query.distinct(true);
                     return cb.and(
                             cb.equal(root.get("category"), category),
-                            cb.lessThan(root.get("createdAt"), cursor)
+                            cb.lessThan(root.get("createdAt"), cursor)     // ← 커서 필터
                     );
                 },
                 pg
