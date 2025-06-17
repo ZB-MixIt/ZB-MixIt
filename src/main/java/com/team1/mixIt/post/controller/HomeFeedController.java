@@ -136,13 +136,14 @@ public class HomeFeedController {
     @GetMapping("/recommendations/today")
     public ResponseTemplate<HomeFeedResponse> recommendedToday(
             @AuthenticationPrincipal User user,
-            @RequestParam(defaultValue = "0") int page
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
         // size 파라미터는 무시하고 항상 20
         HomeFeedResponse rec = feedService.getTodayRecommendations(
                 currentUserId(user),
                 page,
-                20
+                size
         );
         return ResponseTemplate.ok(rec);
     }
