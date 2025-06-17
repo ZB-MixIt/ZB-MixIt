@@ -166,12 +166,21 @@ public class HomeFeedService {
         if (week.getNumberOfElements() == size) return week;
 
         Page<PostResponse> month = aggregateByAction("BOOKMARK", Duration.ofDays(30), pg, currentUserId);
-        if (month.hasContent()) return month;
+        if (month.getNumberOfElements() == size) return month;
 
         // fallback: 전체 bookmarkCount 순
         return postRepository.findAll(
-                PageRequest.of(page, size, Sort.by("bookmarkCount").descending())
-        ).map(p -> toDto(p, currentUserId));
+                        PageRequest.of(
+                                page,
+                                size,
+                                Sort.by(
+                                        Sort.Order.desc("bookmarkCount"),
+                                        Sort.Order.desc("createdAt"),
+                                        Sort.Order.desc("id")
+                                )
+                        )
+                )
+                .map(p -> toDto(p, currentUserId));
     }
 
     /**
@@ -184,7 +193,7 @@ public class HomeFeedService {
     }
 
     /**
-     * 홈: 추천 조합 더보기
+     * 홈: 추천 탭 (오늘 북마크된 게시물 + 인기 태그 10개)
      */
     @Transactional(readOnly = true)
     public HomeFeedResponse getTodayRecommendations(Long currentUserId, int page, int size) {
