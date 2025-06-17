@@ -201,8 +201,9 @@ public class HomeFeedService {
         List<TagStatResponse> tags = tagStatsService.getTopTags(10);
         return new HomeFeedResponse(posts, tags);
     }
-    /**
-     * action 로그 집계 후 PostResponse로 매핑 (VIEW/BOOKMARK)
+
+     /**
+      *  action 로그 집계 후 PostResponse로 매핑 (VIEW/BOOKMARK)
      */
     private Page<PostResponse> aggregateByAction(String action, Duration ago, Pageable pg, Long currentUserId) {
         LocalDateTime start = LocalDate.now().atStartOfDay().minus(ago.minusDays(1));

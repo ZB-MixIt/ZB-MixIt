@@ -14,6 +14,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -127,20 +129,27 @@ public class HomeFeedController {
     }
 
 
-    @Operation(summary = "홈: 추천 게시물 더보기",
-            description = "당일 북마크 기준 게시물 목록을 페이징하여 반환합니다.")
-    @ApiResponse(responseCode = "200", description = "조회 성공",
-            content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
-    )
+
     @GetMapping("/recommendations/today")
-    public ResponseTemplate<HomeFeedResponse> recommendedToday(
+    public ResponseTemplate<Page<PostResponse>> recommendedToday(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseTemplate.ok(
-                feedService.getTodayRecommendations(currentUserId(user), page, size)
+        HomeFeedResponse resp = feedService.getTodayRecommendations(
+                currentUserId(user), page, size);
+
+        InfinitePage<PostResponse> inf = resp.getPosts();
+
+        PageRequest pageable = PageRequest.of(inf.getPage(), inf.getSize());
+
+        Page<PostResponse> pageResp = new PageImpl<>(
+                inf.getContent(),
+                pageable,
+                inf.getTotalElements()
         );
+
+        return ResponseTemplate.ok(pageResp);
     }
 
 
