@@ -137,11 +137,8 @@ public class HomeFeedController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        // 서비스에서 바로 Page<PostResponse>를 가져옵니다.
         Page<PostResponse> posts = feedService.getTodayRecommendationsPosts(
                 currentUserId(user), page, size);
-
-        // InfinitePage로 감싸서 반환
         InfinitePage<PostResponse> inf = new InfinitePage<>();
         inf.setPage(posts.getNumber());
         inf.setSize(posts.getSize());
@@ -150,11 +147,8 @@ public class HomeFeedController {
         inf.setContent(posts.getContent());
         inf.setEmptyMessage(posts.hasContent() ? null : "게시물이 없습니다");
         inf.setNextPage(posts.hasNext() ? posts.getNumber() + 1 : null);
-
         return ResponseTemplate.ok(inf);
     }
-
-
 
 
     private <T> InfinitePage<T> toInfinitePage(Page<T> pg) {
