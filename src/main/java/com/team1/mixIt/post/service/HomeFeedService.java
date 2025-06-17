@@ -202,6 +202,12 @@ public class HomeFeedService {
         return new HomeFeedResponse(posts, tags);
     }
 
+    @Transactional(readOnly = true)
+    public Page<PostResponse> getTodayRecommendationsPosts(Long userId, int page, int size) {
+        // 기존 getTodayRecommendations 내부에서 사용하던 로직 재사용
+        HomeFeedResponse resp = getTodayRecommendations(userId, page, size);
+        return resp.getPosts();
+    }
      /**
       *  action 로그 집계 후 PostResponse로 매핑 (VIEW/BOOKMARK)
      */
