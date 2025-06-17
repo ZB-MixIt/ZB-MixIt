@@ -2,7 +2,6 @@ package com.team1.mixIt.post.controller;
 
 import com.team1.mixIt.common.dto.InfinitePage;
 import com.team1.mixIt.common.dto.ResponseTemplate;
-import com.team1.mixIt.post.dto.response.HomeFeedResponse;
 import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.service.HomeFeedService;
 import com.team1.mixIt.user.entity.User;
@@ -17,6 +16,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -126,26 +127,27 @@ public class HomeFeedController {
         );
     }
 
+
     @Operation(
-            summary = "홈: 추천 게시물 더보기",
-            description = "당일 북마크 기준 게시물 목록을 무한 스크롤 형식으로 반환합니다."
+            summary = "홈: 추천 게시물 더보기 (페이징)",
+            description = "당일 북마크 기준 게시물 목록을 페이징하여 반환합니다."
     )
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
     )
     @GetMapping("/recommendations/today")
-    public ResponseTemplate<HomeFeedResponse> recommendedToday(
+    public ResponseTemplate<Map<String, Page<PostResponse>>> recommendedToday(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        // size 파라미터는 무시하고 항상 20
-        HomeFeedResponse rec = feedService.getTodayRecommendations(
+        Page<PostResponse> pg = feedService.getTodayTopBookmarked(
                 currentUserId(user),
                 page,
                 size
         );
-        return ResponseTemplate.ok(rec);
+        Map<String, Page<PostResponse>> wrapper = Map.of("posts", pg);
+        return ResponseTemplate.ok(wrapper);
     }
 
     private <T> InfinitePage<T> toInfinitePage(Page<T> pg) {
