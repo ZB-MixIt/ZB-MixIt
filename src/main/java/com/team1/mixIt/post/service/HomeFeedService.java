@@ -15,7 +15,10 @@ import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.repository.UserRepository;
 import com.team1.mixIt.utils.ImageUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +26,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -69,7 +71,6 @@ public class HomeFeedService {
         return posts.map(p -> toDto(p, currentUserId));
     }
 
-
     private Duration pickWindow(String category, int size) {
         // 24시간
         Page<Post> p24 = findByCreatedAfter(category, 0, size, Duration.ofHours(24));
@@ -99,13 +100,10 @@ public class HomeFeedService {
         Pageable pg = PageRequest.of(page, size, Sort.by("createdAt").descending());
         LocalDateTime since = LocalDateTime.now().minus(ago);
         return postRepository.findAll(
-                (root, query, cb) -> {
-                    query.distinct(true);
-                    return cb.and(
-                            cb.equal(root.get("category"), category),
-                            cb.greaterThanOrEqualTo(root.get("createdAt"), since)
-                    );
-                },
+                (root, q, cb) -> cb.and(
+                        cb.equal(root.get("category"), category),
+                        cb.greaterThanOrEqualTo(root.get("createdAt"), since)
+                ),
                 pg
         );
     }
@@ -137,6 +135,7 @@ public class HomeFeedService {
      */
     @Transactional(readOnly = true)
     public Page<PostResponse> getWeeklyTopViewed(Long currentUserId, int page, int size) {
+        // 이번 주(7일) 집계만 하고, 부족해도 추가 fallback 없이 그대로 넘겨요.
         return aggregateByAction("VIEW", Duration.ofDays(7),
                 PageRequest.of(page, size, Sort.unsorted()), currentUserId);
     }
@@ -146,15 +145,6 @@ public class HomeFeedService {
      */
     public Page<PostResponse> getPopularCombos(Long currentUserId, int page, int size) {
         return getTodayTopViewed(currentUserId, page, size);
-    }
-
-    // 새로 추가할 오버로드
-    public Page<PostResponse> getPopularCombos(Long currentUserId, Pageable pageable) {
-        return getPopularCombos(
-                currentUserId,
-                pageable.getPageNumber(),
-                pageable.getPageSize()
-        );
     }
 
     /**
@@ -193,98 +183,86 @@ public class HomeFeedService {
      */
     @Transactional(readOnly = true)
     public HomeFeedResponse getTodayRecommendations(Long currentUserId, int page, int size) {
-        Page<PostResponse> pg = getTodayTopBookmarked(currentUserId, page, size);
-        InfinitePage<PostResponse> inf = toInfinitePage(pg);
+        Page<PostResponse> postsPage = getTodayTopBookmarked(currentUserId, page, size);
+        InfinitePage<PostResponse> posts = toInfinitePage(postsPage);
         List<TagStatResponse> tags = tagStatsService.getTopTags(10);
-        return new HomeFeedResponse(inf, tags);
+        return new HomeFeedResponse(posts, tags);
     }
 
     /**
      * action 로그 집계 후 PostResponse로 매핑 (VIEW/BOOKMARK)
      */
-
-
     private Page<PostResponse> aggregateByAction(String action, Duration ago, Pageable pg, Long currentUserId) {
         LocalDateTime start = LocalDate.now().atStartOfDay().minus(ago.minusDays(1));
-        LocalDateTime end   = LocalDate.now().atStartOfDay().plusDays(1);
+        LocalDateTime end = LocalDate.now().atStartOfDay().plusDays(1);
 
-        // 원본 ID 페이지 조회
-        Page<Long> rawIds = switch (action) {
-            case "VIEW"     -> actionLogRepository.findTopViewedPostIds(start, end, pg);
-            case "BOOKMARK" -> actionLogRepository.findTopBookmarkedPostIds(start, end, pg);
-            default         -> Page.empty(pg);
+        Page<Long> ids = switch (action) {
+            case "VIEW" ->
+                    actionLogRepository.findTopViewedPostIds(start, end, pg);
+            case "BOOKMARK" ->
+                    actionLogRepository.findTopBookmarkedPostIds(start, end, pg);
+            default -> Page.empty(pg);
         };
 
-        // 중복 제거
-        List<Long> distinctIds = rawIds.getContent().stream()
-                .distinct()
-                .collect(Collectors.toList());
-
-        // 실제 DTO 변환
-        List<PostResponse> dtos = distinctIds.stream()
-                .map(id -> postRepository.findById(id)
-                        .map(p -> toDto(p, currentUserId))
-                        .orElseThrow(() -> new IllegalStateException("Post not found: " + id)))
-                .collect(Collectors.toList());
-
-        // PageImpl 으로 새로 페이징 정보 생성
-        return new PageImpl<>(dtos, pg, distinctIds.size());
+        return ids.map(id -> toDto(
+                postRepository.findById(id).orElseThrow(), currentUserId
+        ));
     }
-
 
     /**
      * Post -> PostResponse 변환 헬퍼
      */
     private PostResponse toDto(Post p, Long currentUserId) {
-        // 이미지 리스트
+        // 이미지 리스트(ImageDto)
         List<PostResponse.ImageDto> imgDtos = p.getImageIds().stream()
                 .map(imageService::findById)
                 .map(img -> new PostResponse.ImageDto(img.getId(), img.getUrl()))
                 .toList();
 
-        // 대표 이미지
-        String defaultImageUrl = imgDtos.isEmpty()
-                ? ImageUtils.getDefaultImageUrl()
-                : imgDtos.get(0).getSrc();
+        // 대표 이미지 URL: 이미지가 없으면 기본 URL
+        String defaultImageUrl;
+        if (!p.getImageIds().isEmpty()) {
+            Long firstImageId = p.getImageIds().get(0);
+            defaultImageUrl = imageService.findById(firstImageId).getUrl();
+        } else {
+            defaultImageUrl = ImageUtils.getDefaultImageUrl();
+        }
 
-        // 좋아요/북마크/별점 상태
+        // 좋아요 수와 현재 유저가 눌렀는지 여부
         long likeCount = postLikeRepository.countByPostId(p.getId());
-        boolean hasLiked = currentUserId != null
-                && postLikeRepository.findByPostIdAndUserId(p.getId(), currentUserId).isPresent();
-        boolean hasBookmarked = currentUserId != null
-                && postBookmarkService.isBookmarked(p.getId(), currentUserId);
-        RatingResponse rating = ratingService.getRatingResponse(p.getId());
+        boolean hasLiked = (currentUserId != null) &&
+                postLikeRepository.findByPostIdAndUserId(p.getId(), currentUserId).isPresent();
 
-        // 작성자 정보는 바로 로드
+        // 별점 정보
+        RatingResponse ratingResp = ratingService.getRatingResponse(p.getId());
+
+        // 작성자 정보: User 엔티티에서 닉네임과 프로필 이미지 조회
         User author = userRepository.findById(p.getUserId())
                 .orElseThrow(() -> new IllegalStateException("작성자 정보 없음"));
         String authorNickname = author.getNickname();
-        String authorProfileImage = author.getProfileImage() != null
-                ? author.getProfileImage().getUrl()
-                : null;
+        String authorProfileImage = null;
+        if (author.getProfileImage() != null) {
+            authorProfileImage = author.getProfileImage().getUrl();
+        }
 
-        // DTO 빌드
-        return PostResponse.builder()
-                .id(p.getId())
-                .userId(p.getUserId())
-                .authorNickname(authorNickname)
-                .authorProfileImage(authorProfileImage)
-                .category(p.getCategory())
-                .title(p.getTitle())
-                .content(p.getContent())
-                .images(imgDtos)
-                .defaultImage(defaultImageUrl)
-                .viewCount(p.getViewCount())
-                .hasLiked(hasLiked)
-                .hasBookmarked(hasBookmarked)
-                .likeCount(likeCount)
-                .bookmarkCount(p.getBookmarkCount())
-                .tags(p.getHashtag().stream().map(h -> h.getHashtag()).toList())
-                .isAuthor(currentUserId != null && p.getUserId().equals(currentUserId))
-                .rating(rating)
-                .createdAt(p.getCreatedAt())
-                .updatedAt(p.getModifiedAt())
-                .build();
+        // 북마크 여부
+        boolean hasBookmarked = (currentUserId != null) &&
+                postBookmarkService.isBookmarked(p.getId(), currentUserId);
+
+        // 작성자 여부 판정
+        boolean isAuthor = (currentUserId != null) && p.getUserId().equals(currentUserId);
+
+        // 최종 빌드
+        return PostResponse.fromEntity(
+                p,
+                currentUserId,
+                defaultImageUrl,
+                imageService,
+                postBookmarkService,
+                ratingResp,
+                likeCount,
+                hasLiked
+        );
     }
 
     /**
@@ -294,30 +272,6 @@ public class HomeFeedService {
         return posts.map(p -> toDto(p, currentUserId));
     }
 
-    @Transactional(readOnly = true)
-    public Page<PostResponse> getHomeByCategoryCursor(
-            Long currentUserId,
-            String category,
-            LocalDateTime cursor,  // ← 여기에 마지막으로 본 글의 createdAt
-            int size
-    ) {
-        // 정렬: createdAt DESC
-        Pageable pg = PageRequest.of(0, size, Sort.by("createdAt").descending());
-
-        // JPA Specification 을 써서 createdAt < cursor 조건 추가
-        Page<Post> posts = postRepository.findAll(
-                (root, query, cb) -> {
-                    query.distinct(true);
-                    return cb.and(
-                            cb.equal(root.get("category"), category),
-                            cb.lessThan(root.get("createdAt"), cursor)     // ← 커서 필터
-                    );
-                },
-                pg
-        );
-
-        return posts.map(p -> toDto(p, currentUserId));
-    }
 
     private <T> InfinitePage<T> toInfinitePage(Page<T> pg) {
         InfinitePage<T> inf = new InfinitePage<>();

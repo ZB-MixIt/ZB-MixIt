@@ -95,6 +95,7 @@ public class HomeFeedController {
         );
     }
 
+
     @Operation(summary = "홈: 인기 조합 더보기",
             description = "당일 조회수 기준 게시물 목록을 페이징하여 반환합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공",
@@ -127,7 +128,7 @@ public class HomeFeedController {
     }
 
     @Operation(summary = "홈: 추천 게시물 더보기",
-              description = "당일 북마크 기준 게시물 목록을 페이징하여 반환합니다.")
+            description = "당일 북마크 기준 게시물 목록을 페이징하여 반환합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
     )
