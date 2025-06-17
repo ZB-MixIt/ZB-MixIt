@@ -150,9 +150,9 @@ public class HomeFeedController {
     public ResponseTemplate<Map<String, Object>> recommendedToday(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "5") int size
+            @RequestParam(defaultValue = "20") int ignoredSize
     ) {
-        int fetchSize = page == 0 ? size : 20;
+        int fetchSize = (page == 0 ? Math.min(ignoredSize, 5) : 20);
 
 
         Page<PostResponse> posts = feedService.getTodayRecommendationsPosts(
