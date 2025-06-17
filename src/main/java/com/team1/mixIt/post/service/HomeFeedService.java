@@ -3,11 +3,13 @@ package com.team1.mixIt.post.service;
 import com.team1.mixIt.actionlog.repository.ActionLogRepository;
 import com.team1.mixIt.common.dto.InfinitePage;
 import com.team1.mixIt.image.service.ImageService;
+import com.team1.mixIt.post.dto.response.HomeFeedResponse;
 import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.dto.response.RatingResponse;
 import com.team1.mixIt.post.entity.Post;
 import com.team1.mixIt.post.repository.PostLikeRepository;
 import com.team1.mixIt.post.repository.PostRepository;
+import com.team1.mixIt.tag.dto.response.TagStatResponse;
 import com.team1.mixIt.tag.service.TagStatsService;
 import com.team1.mixIt.user.entity.User;
 import com.team1.mixIt.user.repository.UserRepository;
@@ -180,10 +182,11 @@ public class HomeFeedService {
      * 홈: 추천 탭 (오늘 북마크된 게시물 + 인기 태그 10개)
      */
     @Transactional(readOnly = true)
-    public Page<PostResponse> getTodayRecommendations(Long currentUserId, int page, int size) {
-        return getTodayTopBookmarked(currentUserId, page, size);
+    public HomeFeedResponse getTodayRecommendations(Long currentUserId, int page, int size) {
+        Page<PostResponse> posts = getTodayTopBookmarked(currentUserId, page, size);
+        List<TagStatResponse> tags = tagStatsService.getTopTags(10);
+        return new HomeFeedResponse(posts, tags);
     }
-
     /**
      * action 로그 집계 후 PostResponse로 매핑 (VIEW/BOOKMARK)
      */
