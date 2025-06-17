@@ -2,7 +2,6 @@ package com.team1.mixIt.post.controller;
 
 import com.team1.mixIt.common.dto.InfinitePage;
 import com.team1.mixIt.common.dto.ResponseTemplate;
-import com.team1.mixIt.post.dto.response.HomeFeedResponse;
 import com.team1.mixIt.post.dto.response.PostResponse;
 import com.team1.mixIt.post.service.HomeFeedService;
 import com.team1.mixIt.user.entity.User;
@@ -127,19 +126,19 @@ public class HomeFeedController {
         );
     }
 
-    @Operation(summary = "홈: 추천 게시물 더보기",
+    @Operation(summary = "홈: 추천 게시물 더보기 (페이징)",
             description = "당일 북마크 기준 게시물 목록을 페이징하여 반환합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
     )
     @GetMapping("/recommendations/today")
-    public ResponseTemplate<HomeFeedResponse> recommendedToday(
+    public ResponseTemplate<Page<PostResponse>> recommendedToday(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         return ResponseTemplate.ok(
-                feedService.getTodayRecommendations(currentUserId(user), page, size)
+                feedService.getTodayTopBookmarked(currentUserId(user), page, size)
         );
     }
 
