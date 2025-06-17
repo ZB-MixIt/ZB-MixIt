@@ -202,6 +202,7 @@ public class HomeFeedService {
         return new HomeFeedResponse(posts, tags);
     }
 
+    @Transactional(readOnly = true)
     public Page<PostResponse> getTodayRecommendationsPosts(Long userId, int page, int size) {
         // HomeFeedResponse 대신 바로 북마크 기반 페이지를 반환하도록
         return getTodayTopBookmarked(userId, page, size);
