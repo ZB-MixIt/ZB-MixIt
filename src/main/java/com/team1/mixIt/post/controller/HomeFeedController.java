@@ -14,9 +14,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -98,32 +95,22 @@ public class HomeFeedController {
         );
     }
 
-    @Operation(
-            summary = "홈: 인기 조합 더보기",
-            description = "당일 조회수 기준 게시물 목록을 무한 스크롤 형식으로 반환합니다."
-    )
+    @Operation(summary = "홈: 인기 조합 더보기",
+            description = "당일 조회수 기준 게시물 목록을 페이징하여 반환합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
     )
-
     @GetMapping("/popular/combos")
-    public ResponseTemplate<InfinitePage<PostResponse>> popularCombos(
+    public ResponseTemplate<Page<PostResponse>> popularCombos(
             @AuthenticationPrincipal User user,
-            @PageableDefault(size = 20) Pageable pageable
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
-        // 클라이언트가 뭘 넘기든지 size = 20 으로 고정
-        Pageable fixed = PageRequest.of(
-                pageable.getPageNumber(),
-                20,
-                pageable.getSort()
+        return ResponseTemplate.ok(
+                feedService.getTodayTopViewed(currentUserId(user), page, size)
         );
-
-        Page<PostResponse> pg = feedService.getPopularCombos(
-                currentUserId(user),
-                fixed
-        );
-        return ResponseTemplate.ok(toInfinitePage(pg));
     }
+
 
     @Operation(summary = "홈: 오늘의 추천 북마크 Top4",
             description = "당일 북마크 순으로 상위 4개 게시물을 반환합니다.")
@@ -139,26 +126,22 @@ public class HomeFeedController {
         );
     }
 
-    @Operation(
-            summary = "홈: 추천 게시물 더보기",
-            description = "당일 북마크 기준 게시물 목록을 무한 스크롤 형식으로 반환합니다."
-    )
+    @Operation(summary = "홈: 추천 게시물 더보기",
+              description = "당일 북마크 기준 게시물 목록을 페이징하여 반환합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
     )
     @GetMapping("/recommendations/today")
     public ResponseTemplate<HomeFeedResponse> recommendedToday(
             @AuthenticationPrincipal User user,
-            @RequestParam(defaultValue = "0") int page
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
-        // size 파라미터는 무시하고 항상 20
-        HomeFeedResponse rec = feedService.getTodayRecommendations(
-                currentUserId(user),
-                page,
-                20
+        return ResponseTemplate.ok(
+                feedService.getTodayRecommendations(currentUserId(user), page, size)
         );
-        return ResponseTemplate.ok(rec);
     }
+
 
     private <T> InfinitePage<T> toInfinitePage(Page<T> pg) {
         InfinitePage<T> inf = new InfinitePage<>();
