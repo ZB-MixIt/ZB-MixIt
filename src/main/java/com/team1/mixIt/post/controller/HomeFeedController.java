@@ -152,13 +152,11 @@ public class HomeFeedController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int ignoredSize
     ) {
-        int fetchSize = (page == 0 ? Math.min(ignoredSize, 5) : 20);
-
 
         Page<PostResponse> posts = feedService.getTodayRecommendationsPosts(
                 currentUserId(user),
                 page,
-                fetchSize
+                ignoredSize
         );
 
         InfinitePage<PostResponse> inf = new InfinitePage<>();
