@@ -97,22 +97,34 @@ public class HomeFeedController {
         );
     }
 
-    @Operation(summary = "홈: 인기 조합 더보기",
-            description = "당일 조회수 기준 게시물 목록을 페이징하여 반환합니다.")
+    @Operation(
+            summary = "홈: 인기 조합 더보기",
+            description = "당일 조회수 기준 게시물 목록을 페이징하여 반환합니다."
+    )
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class))
     )
     @GetMapping("/popular/combos")
-    public ResponseTemplate<Page<PostResponse>> popularCombos(
+    public ResponseTemplate<InfinitePage<PostResponse>> popularCombos(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseTemplate.ok(
-                feedService.getTodayTopViewed(currentUserId(user), page, size)
+        Page<PostResponse> posts = feedService.getTodayTopViewed(
+                currentUserId(user), page, size
         );
-    }
 
+        InfinitePage<PostResponse> inf = new InfinitePage<>();
+        inf.setPage(posts.getNumber());
+        inf.setSize(posts.getSize());
+        inf.setTotalPages(posts.getTotalPages());
+        inf.setTotalElements(posts.getTotalElements());
+        inf.setContent(posts.getContent());
+        inf.setEmptyMessage(posts.hasContent() ? null : "게시물이 없습니다");
+        inf.setNextPage(posts.hasNext() ? posts.getNumber() + 1 : null);
+
+        return ResponseTemplate.ok(inf);
+    }
 
     @Operation(summary = "홈: 오늘의 추천 북마크 Top4",
             description = "당일 북마크 순으로 상위 4개 게시물을 반환합니다.")
