@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -106,7 +107,7 @@ public class HomeFeedController {
     @GetMapping("/popular/combos")
     public ResponseTemplate<InfinitePage<PostResponse>> popularCombos(
             @AuthenticationPrincipal User user,
-            Pageable pageable
+            @PageableDefault(size = 20) Pageable pageable
     ) {
         Page<PostResponse> pg = feedService.getPopularCombos(
                 currentUserId(user),
