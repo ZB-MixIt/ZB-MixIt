@@ -17,6 +17,9 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
+import java.util.Map;
+
 @Slf4j
 @RestController
 @RequestMapping(
@@ -132,13 +135,15 @@ public class HomeFeedController {
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ResponseTemplate.class)))
     @GetMapping("/recommendations/today")
-    public ResponseTemplate<InfinitePage<PostResponse>> recommendedToday(
+    public ResponseTemplate<Map<String, Object>> recommendedToday(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         Page<PostResponse> posts = feedService.getTodayRecommendationsPosts(
                 currentUserId(user), page, size);
+
+        // 2) InfinitePage로 감싸기
         InfinitePage<PostResponse> inf = new InfinitePage<>();
         inf.setPage(posts.getNumber());
         inf.setSize(posts.getSize());
@@ -147,7 +152,15 @@ public class HomeFeedController {
         inf.setContent(posts.getContent());
         inf.setEmptyMessage(posts.hasContent() ? null : "게시물이 없습니다");
         inf.setNextPage(posts.hasNext() ? posts.getNumber() + 1 : null);
-        return ResponseTemplate.ok(inf);
+
+        // 3) Map 으로 posts 키에 얹기
+        Map<String, Object> wrapper = Map.of(
+                "posts", inf,
+                // tags는 필요 없으면 빈 리스트로
+                "tags", Collections.emptyList()
+        );
+        return ResponseTemplate.ok(wrapper);
+
     }
 
 
