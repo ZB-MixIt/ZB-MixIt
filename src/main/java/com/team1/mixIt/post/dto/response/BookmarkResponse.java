@@ -44,6 +44,8 @@ public class BookmarkResponse {
     @Schema(description = "북마크 수", example = "17")
     private final Integer bookmarkCount;
 
+    @Schema(description = "대표 이미지 URL (없으면 기본 이미지)", example = "https://../기본이미지.png")
+    private String defaultImage;
 
     @Getter
     @Builder
@@ -55,6 +57,7 @@ public class BookmarkResponse {
 
         @Schema(description = "이미지 URL", example = "https://.../img1.jpg")
         private final String src;
+
     }
 
 
@@ -104,6 +107,10 @@ public class BookmarkResponse {
 
         Integer bookmarkCount = post.getBookmarkCount();
 
+        String defImage = !imageDtos.isEmpty()
+                ? imageDtos.get(0).getSrc()
+                : defaultImageUrl;
+
         return BookmarkResponse.builder()
                 .id(postId)
                 .title(title)
@@ -111,6 +118,7 @@ public class BookmarkResponse {
                 .avgRating(avgRating)
                 .hasLiked(hasLiked)
                 .images(imageDtos)
+                .defaultImage(defImage)
                 .authorId(authorId)
                 .authorNickname(authorNickname)
                 .bookmarkCount(bookmarkCount)
